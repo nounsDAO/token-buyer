@@ -27,7 +27,6 @@ contract TokenBuyer is Ownable {
     using SafeERC20 for IERC20;
 
     error FailedSendingETH(bytes data);
-    error TokenAmountTooHigh(uint256 amount, uint256 amountNeeded);
     error FailedWithdrawingETH(bytes data);
 
     uint8 public constant WAD_DECIMALS = 18;
