@@ -141,7 +141,14 @@ contract TokenBuyer is Ownable {
      * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in WAD format.
      */
     function tokenAmountNeeded() public view returns (uint256) {
-        return baselinePaymentTokenAmount + iouToken.totalSupply() - paymentTokenBalance();
+        uint256 _paymentTokenBalance = paymentTokenBalance();
+        uint256 iouSupply = iouToken.totalSupply();
+        unchecked {
+            if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
+                return 0;
+            }
+            return baselinePaymentTokenAmount + iouSupply - _paymentTokenBalance;
+        }
     }
 
     /**
