@@ -86,6 +86,43 @@ contract TokenBuyerTest is Test {
         assertEq(buyer.tokenAmountNeeded(), toWAD(69_000));
     }
 
+    function test_price_botIncentiveZero() public {
+        priceFeed.setPrice(1234 gwei);
+        priceFeed.setDecimals(18);
+
+        (uint256 price, uint8 decimals) = buyer.price();
+
+        assertEq(price, 1234 gwei);
+        assertEq(decimals, 18);
+    }
+
+    function test_price_botIncentive50BPs() public {
+        vm.prank(owner);
+        buyer.setBotIncentiveBPs(50);
+
+        priceFeed.setPrice(4242 gwei);
+        priceFeed.setDecimals(18);
+
+        (uint256 price, uint8 decimals) = buyer.price();
+
+        // 4263.21 gwei
+        assertEq(price, 426321 * 10**7);
+        assertEq(decimals, 18);
+    }
+
+    function test_price_botIncentive2X() public {
+        vm.prank(owner);
+        buyer.setBotIncentiveBPs(10_000);
+
+        priceFeed.setPrice(4242 gwei);
+        priceFeed.setDecimals(18);
+
+        (uint256 price, uint8 decimals) = buyer.price();
+
+        assertEq(price, 8484 gwei);
+        assertEq(decimals, 18);
+    }
+
     function toWAD(uint256 amount) public pure returns (uint256) {
         return amount * 10**18;
     }
