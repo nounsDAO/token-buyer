@@ -16,6 +16,7 @@ contract TokenBuyerTest is Test {
     uint16 botIncentiveBPs = 0;
 
     address owner = address(42);
+    address bot = address(99);
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
@@ -121,6 +122,57 @@ contract TokenBuyerTest is Test {
 
         assertEq(price, 8484 gwei);
         assertEq(decimals, 18);
+    }
+
+    function test_buyETH_botBuysExactBaselineAmount() public {
+        // Say ETH is worth $2000, then the oracle price denominated in ETH would be
+        // 1 / 2000 = 0.0005
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(bot, toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(2000));
+        buyer.buyETH(toWAD(2000));
+        vm.stopPrank();
+
+        assertEq(bot.balance, 1 ether);
+    }
+
+    function test_buyETH_botCappedToBaselineAmount() public {
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(bot, toWAD(4000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(4000));
+        buyer.buyETH(toWAD(4000));
+        vm.stopPrank();
+
+        assertEq(bot.balance, 1 ether);
+        assertEq(paymentToken.balanceOf(bot), toWAD(2000));
+    }
+
+    function test_buyETH_revertsWhenContractHasInsufficientETH() public {
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        paymentToken.mint(bot, toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        assertEq(address(buyer).balance, 0);
+
+        vm.prank(bot);
+        paymentToken.approve(address(buyer), toWAD(2000));
+
+        vm.prank(bot);
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        buyer.buyETH(toWAD(2000));
     }
 
     function toWAD(uint256 amount) public pure returns (uint256) {
