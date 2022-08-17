@@ -266,6 +266,89 @@ contract TokenBuyerTest is Test {
         assertEq(paymentToken.balanceOf(user), 0);
     }
 
+    function test_redeem_givenEnoughPaymentTokenSendsFullAmount() public {
+        uint256 amount = toWAD(100_000);
+        vm.prank(address(buyer));
+        iou.mint(user, amount);
+        paymentToken.mint(address(buyer), amount);
+
+        buyer.redeem(user);
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), amount);
+        assertEq(paymentToken.balanceOf(address(buyer)), 0);
+    }
+
+    function test_redeem_givenPartialPaymentTokenSendsPartialAmount() public {
+        uint256 amount = toWAD(100_000);
+        vm.prank(address(buyer));
+        iou.mint(user, amount);
+        paymentToken.mint(address(buyer), amount - 1);
+
+        buyer.redeem(user);
+
+        assertEq(iou.balanceOf(user), 1);
+        assertEq(paymentToken.balanceOf(user), amount - 1);
+        assertEq(paymentToken.balanceOf(address(buyer)), 0);
+    }
+
+    function test_redeem_givenNoPaymentTokenSendsNothing() public {
+        uint256 amount = toWAD(100_000);
+        vm.prank(address(buyer));
+        iou.mint(user, amount);
+
+        buyer.redeem(user);
+
+        assertEq(iou.balanceOf(user), amount);
+        assertEq(paymentToken.balanceOf(user), 0);
+    }
+
+    function test_redeem_givenNoIOUBalanceSendsNothing() public {
+        paymentToken.mint(address(buyer), toWAD(100_000));
+
+        buyer.redeem(user);
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(100_000));
+    }
+
+    function test_redeem_withExplicitAmount_givenNoIOUBalanceDoesNothing() public {
+        paymentToken.mint(address(buyer), toWAD(100_000));
+
+        buyer.redeem(user, toWAD(100_000));
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(100_000));
+    }
+
+    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsRedeemsIOUBalance() public {
+        paymentToken.mint(address(buyer), toWAD(100_000));
+        vm.prank(address(buyer));
+        iou.mint(user, toWAD(42_000));
+
+        buyer.redeem(user, toWAD(69_000));
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
+        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(58_000));
+    }
+
+    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsAndPaymentTokenBalanceRedeemsAllTokenBalance()
+        public
+    {
+        paymentToken.mint(address(buyer), toWAD(42_000));
+        vm.prank(address(buyer));
+        iou.mint(user, toWAD(69_000));
+
+        buyer.redeem(user, toWAD(100_000));
+
+        assertEq(iou.balanceOf(user), toWAD(27_000));
+        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
+        assertEq(paymentToken.balanceOf(address(buyer)), 0);
+    }
+
     function toWAD(uint256 amount) public pure returns (uint256) {
         return amount * 10**18;
     }
