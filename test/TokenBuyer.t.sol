@@ -18,6 +18,7 @@ contract TokenBuyerTest is Test {
 
     address owner = address(42);
     address bot = address(99);
+    address user = address(1234);
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
@@ -226,6 +227,43 @@ contract TokenBuyerTest is Test {
 
         assertEq(paymentToken.balanceOf(address(attacker)), toWAD(2000));
         assertEq(address(attacker).balance, 1 ether);
+    }
+
+    function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {
+        uint256 amount = toWAD(100_000);
+        vm.prank(owner);
+        buyer.sendOrMint(user, amount);
+
+        assertEq(iou.balanceOf(user), amount);
+        assertEq(paymentToken.balanceOf(user), 0);
+    }
+
+    function test_sendOrMint_givenEnoughPaymentTokenPaysInToken() public {
+        uint256 amount = toWAD(100_000);
+        paymentToken.mint(address(buyer), amount);
+        vm.prank(owner);
+        buyer.sendOrMint(user, amount);
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), amount);
+    }
+
+    function test_sendOrMint_givenPartialPaymentTokenBalancePaysInBoth() public {
+        uint256 amount = toWAD(100_000);
+        paymentToken.mint(address(buyer), toWAD(42_000));
+        vm.prank(owner);
+        buyer.sendOrMint(user, amount);
+
+        assertEq(iou.balanceOf(user), toWAD(58_000));
+        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
+    }
+
+    function test_sendOrMint_zeroDoesntRevert() public {
+        vm.prank(owner);
+        buyer.sendOrMint(user, 0);
+
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), 0);
     }
 
     function toWAD(uint256 amount) public pure returns (uint256) {
