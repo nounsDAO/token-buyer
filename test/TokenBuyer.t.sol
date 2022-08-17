@@ -349,6 +349,110 @@ contract TokenBuyerTest is Test {
         assertEq(paymentToken.balanceOf(address(buyer)), 0);
     }
 
+    function test_happyFlow_payingFullyInPaymentToken() public {
+        // price of 0.01
+        priceFeed.setPrice(toWAD(100));
+        priceFeed.setDecimals(22);
+        vm.prank(owner);
+        // 1% incentive
+        buyer.setBotIncentiveBPs(100);
+        // set buffer (100K)
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+
+        // fund bot and buyer
+        paymentToken.mint(bot, toWAD(100_000));
+        vm.deal(address(buyer), 1010 ether);
+
+        // bots buy buffer (100K)
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(100_000));
+        buyer.buyETH(toWAD(100_000));
+        vm.stopPrank();
+        assertEq(paymentToken.balanceOf(bot), 0);
+        assertEq(bot.balance, 1010 ether);
+
+        // send or mint (42K)
+        vm.prank(owner);
+        buyer.sendOrMint(user, toWAD(42_000));
+
+        // user gets sent that amount right away
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
+
+        // fund bot and buyer again
+        paymentToken.mint(bot, toWAD(42_000));
+        // 424.2
+        vm.deal(address(buyer), 4242 * 10**17);
+
+        // bots can top off what's missing (bots buy 42K)
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(42_000));
+        buyer.buyETH(toWAD(42_000));
+        vm.stopPrank();
+        assertEq(paymentToken.balanceOf(bot), 0);
+        assertEq(bot.balance, 1010 ether + 4242 * 10**17);
+    }
+
+    function test_happyFlow_payingOverTheBuffer() public {
+        // price of 0.01
+        priceFeed.setPrice(toWAD(100));
+        priceFeed.setDecimals(22);
+        vm.prank(owner);
+        // 1% incentive
+        buyer.setBotIncentiveBPs(100);
+        // set buffer (100K)
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+
+        // fund bot and buyer
+        paymentToken.mint(bot, toWAD(100_000));
+        vm.deal(address(buyer), 1010 ether);
+
+        // bots buy buffer (100K)
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(100_000));
+        buyer.buyETH(toWAD(100_000));
+        vm.stopPrank();
+        assertEq(paymentToken.balanceOf(bot), 0);
+        assertEq(bot.balance, 1010 ether);
+
+        // send or mint (142K)
+        vm.prank(owner);
+        buyer.sendOrMint(user, toWAD(142_000));
+        assertEq(iou.balanceOf(user), toWAD(42_000));
+        assertEq(paymentToken.balanceOf(user), toWAD(100_000));
+
+        // fund bot and buyer again
+        paymentToken.mint(bot, toWAD(42_000));
+        // 424.2
+        vm.deal(address(buyer), 4242 * 10**17);
+
+        // bots can top off what's missing (bots buy 42K)
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(42_000));
+        buyer.buyETH(toWAD(42_000));
+        vm.stopPrank();
+        assertEq(paymentToken.balanceOf(bot), 0);
+        assertEq(bot.balance, 1010 ether + 4242 * 10**17);
+
+        // anyone can redeem user's remaining balance(42K)
+        buyer.redeem(user);
+        assertEq(iou.balanceOf(user), 0);
+        assertEq(paymentToken.balanceOf(user), toWAD(142_000));
+
+        // bots can top off what's missing (bots buy 100K)
+        // fund bot and buyer again
+        paymentToken.mint(bot, toWAD(100_000));
+        vm.deal(address(buyer), 1010 ether);
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), toWAD(100_000));
+        buyer.buyETH(toWAD(100_000));
+        vm.stopPrank();
+        assertEq(paymentToken.balanceOf(bot), 0);
+        assertEq(bot.balance, 1010 ether + 4242 * 10**17 + 1010 ether);
+    }
+
     function toWAD(uint256 amount) public pure returns (uint256) {
         return amount * 10**18;
     }
