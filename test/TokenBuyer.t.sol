@@ -6,6 +6,7 @@ import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { TestERC20 } from './helpers/TestERC20.sol';
 import { IOUToken } from '../src/IOUToken.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
+import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract TokenBuyerTest is Test {
     TokenBuyer buyer;
@@ -173,6 +174,58 @@ contract TokenBuyerTest is Test {
         vm.prank(bot);
         vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
         buyer.buyETH(toWAD(2000));
+    }
+
+    function test_buyETH_revertsWhenTokenApprovalInsufficient() public {
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(bot, toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        vm.prank(bot);
+        paymentToken.approve(address(buyer), toWAD(2000) - 1);
+
+        vm.prank(bot);
+        vm.expectRevert('ERC20: insufficient allowance');
+        buyer.buyETH(toWAD(2000));
+    }
+
+    function test_buyETH_maliciousBuyerCantDoubleSpend() public {
+        MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        vm.deal(address(buyer), 10 ether);
+        paymentToken.mint(address(attacker), toWAD(4000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(4000));
+
+        vm.prank(address(attacker));
+        paymentToken.approve(address(buyer), toWAD(4000));
+
+        attacker.attack(toWAD(2000));
+
+        assertEq(paymentToken.balanceOf(address(attacker)), 0);
+        assertEq(address(attacker).balance, 2 ether);
+    }
+
+    function test_buyETH_maliciousBuyerCantExceedTokensNeeded() public {
+        MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
+        priceFeed.setPrice(5);
+        priceFeed.setDecimals(4);
+        vm.deal(address(buyer), 10 ether);
+        paymentToken.mint(address(attacker), toWAD(4000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        vm.prank(address(attacker));
+        paymentToken.approve(address(buyer), toWAD(4000));
+
+        attacker.attack(toWAD(2000));
+
+        assertEq(paymentToken.balanceOf(address(attacker)), toWAD(2000));
+        assertEq(address(attacker).balance, 1 ether);
     }
 
     function toWAD(uint256 amount) public pure returns (uint256) {

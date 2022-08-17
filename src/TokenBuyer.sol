@@ -89,12 +89,11 @@ contract TokenBuyer is Ownable {
     /**
      * @notice Buy ETH from this contract in exchange for the ERC20 this token wants to acquire. The price
      * is determined using `priceFeed` plus `botIncentiveBPs` basis points.
-     * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible
+     * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible. This function allows reentry because it does
+     * not allow double spending or exceeding the contract's {tokenAmountNeeded()}.
      * @param tokenAmountWAD the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in WAD format.
      */
     function buyETH(uint256 tokenAmountWAD) external payable {
-        // TODO protect from reentrance
-
         uint256 amount = min(tokenAmountWAD, tokenAmountNeeded());
 
         paymentToken.safeTransferFrom(msg.sender, address(this), wadToTokenDecimals(amount));
