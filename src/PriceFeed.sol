@@ -23,7 +23,7 @@ import { AggregatorV3Interface } from './AggregatorV3Interface.sol';
 contract PriceFeed is IPriceFeed {
     error StaleOracle(uint256 updatedAt);
 
-    uint256 public constant STALE_AFTER = 4 hours;
+    uint256 public constant STALE_AFTER = 10 hours;
 
     AggregatorV3Interface public immutable chainlink;
     uint8 public immutable decimals;
