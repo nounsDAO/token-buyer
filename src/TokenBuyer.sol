@@ -167,10 +167,9 @@ contract TokenBuyer is Ownable {
         return ethCostWithBuffer - address(this).balance;
     }
 
-    function price() public view returns (uint256, uint8) {
-        (uint256 tokenPrice, uint8 priceDecimals) = priceFeed.price();
-        tokenPrice = (tokenPrice * (botIncentiveBPs + 10_000)) / 10_000;
-        return (tokenPrice, priceDecimals);
+    function price() public view returns (uint256) {
+        uint256 tokenPrice = priceFeed.price();
+        return (tokenPrice * (botIncentiveBPs + 10_000)) / 10_000;
     }
 
     /**
@@ -242,8 +241,7 @@ contract TokenBuyer is Ownable {
     }
 
     function ethAmountPerTokenAmount(uint256 tokenAmount) internal view returns (uint256) {
-        (uint256 tokenPrice, uint8 priceDecimals) = price();
-        return (tokenAmount * tokenPrice) / 10**priceDecimals;
+        return (tokenAmount * price()) / 1 ether;
     }
 
     function _redeem(address account, uint256 amountWAD) internal {

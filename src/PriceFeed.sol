@@ -19,36 +19,54 @@ pragma solidity ^0.8.15;
 
 import { IPriceFeed } from './IPriceFeed.sol';
 import { AggregatorV3Interface } from './AggregatorV3Interface.sol';
+import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
 contract PriceFeed is IPriceFeed {
+    using SafeCast for int256;
+
+    uint256 constant WAD_DECIMALS = 18;
+
     error StaleOracle(uint256 updatedAt);
 
     AggregatorV3Interface public immutable chainlink;
     uint8 public immutable decimals;
     uint256 public immutable staleAfter;
+    uint256 public immutable decimalFactor;
 
     constructor(AggregatorV3Interface _chainlink, uint256 _staleAfter) {
         chainlink = _chainlink;
         decimals = chainlink.decimals();
         staleAfter = _staleAfter;
+
+        uint256 decimalFactorTemp = 1;
+        if (decimals < WAD_DECIMALS) {
+            decimalFactorTemp = 10**(WAD_DECIMALS - decimals);
+        } else if (decimals > WAD_DECIMALS) {
+            decimalFactorTemp = 10**(decimals - WAD_DECIMALS);
+        }
+        decimalFactor = decimalFactorTemp;
     }
 
     /**
-     * @return uin256 Token/ETH price
-     * @return uint8 the price decimals
+     * @return uin256 Token/ETH price in WAD format
      */
-    function price() external view returns (uint256, uint8) {
+    function price() external view override returns (uint256) {
         (, int256 chainlinkPrice, , uint256 updatedAt, ) = chainlink.latestRoundData();
 
         if (updatedAt < block.timestamp - staleAfter) {
             revert StaleOracle(updatedAt);
         }
 
-        return (toUint256(chainlinkPrice), decimals);
+        return toWAD(chainlinkPrice.toUint256());
     }
 
-    function toUint256(int256 value) internal pure returns (uint256) {
-        require(value >= 0);
-        return uint256(value);
+    function toWAD(uint256 chainlinkPrice) internal view returns (uint256) {
+        if (decimals == WAD_DECIMALS) {
+            return chainlinkPrice;
+        } else if (decimals < WAD_DECIMALS) {
+            return chainlinkPrice * decimalFactor;
+        } else {
+            return chainlinkPrice / decimalFactor;
+        }
     }
 }

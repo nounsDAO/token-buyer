@@ -91,12 +91,10 @@ contract TokenBuyerTest is Test {
 
     function test_price_botIncentiveZero() public {
         priceFeed.setPrice(1234 gwei);
-        priceFeed.setDecimals(18);
 
-        (uint256 price, uint8 decimals) = buyer.price();
+        uint256 price = buyer.price();
 
         assertEq(price, 1234 gwei);
-        assertEq(decimals, 18);
     }
 
     function test_price_botIncentive50BPs() public {
@@ -104,13 +102,11 @@ contract TokenBuyerTest is Test {
         buyer.setBotIncentiveBPs(50);
 
         priceFeed.setPrice(4242 gwei);
-        priceFeed.setDecimals(18);
 
-        (uint256 price, uint8 decimals) = buyer.price();
+        uint256 price = buyer.price();
 
         // 4263.21 gwei
         assertEq(price, 426321 * 10**7);
-        assertEq(decimals, 18);
     }
 
     function test_price_botIncentive2X() public {
@@ -118,19 +114,16 @@ contract TokenBuyerTest is Test {
         buyer.setBotIncentiveBPs(10_000);
 
         priceFeed.setPrice(4242 gwei);
-        priceFeed.setDecimals(18);
 
-        (uint256 price, uint8 decimals) = buyer.price();
+        uint256 price = buyer.price();
 
         assertEq(price, 8484 gwei);
-        assertEq(decimals, 18);
     }
 
     function test_buyETH_botBuysExactBaselineAmount() public {
         // Say ETH is worth $2000, then the oracle price denominated in ETH would be
         // 1 / 2000 = 0.0005
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, toWAD(2000));
         vm.prank(owner);
@@ -145,8 +138,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_botCappedToBaselineAmount() public {
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, toWAD(4000));
         vm.prank(owner);
@@ -162,8 +154,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenContractHasInsufficientETH() public {
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         paymentToken.mint(bot, toWAD(2000));
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
@@ -178,8 +169,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenTokenApprovalInsufficient() public {
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, toWAD(2000));
         vm.prank(owner);
@@ -195,8 +185,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETH_maliciousBuyerCantDoubleSpend() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), toWAD(4000));
         vm.prank(owner);
@@ -213,8 +202,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETH_maliciousBuyerCantExceedTokensNeeded() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(5);
-        priceFeed.setDecimals(4);
+        priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), toWAD(4000));
         vm.prank(owner);
@@ -350,9 +338,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_happyFlow_payingFullyInPaymentToken() public {
-        // price of 0.01
-        priceFeed.setPrice(toWAD(100));
-        priceFeed.setDecimals(22);
+        priceFeed.setPrice(0.01 ether);
         vm.prank(owner);
         // 1% incentive
         buyer.setBotIncentiveBPs(100);
@@ -395,9 +381,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_happyFlow_payingOverTheBuffer() public {
-        // price of 0.01
-        priceFeed.setPrice(toWAD(100));
-        priceFeed.setDecimals(22);
+        priceFeed.setPrice(0.01 ether);
         vm.prank(owner);
         // 1% incentive
         buyer.setBotIncentiveBPs(100);

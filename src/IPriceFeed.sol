@@ -19,8 +19,7 @@ pragma solidity ^0.8.15;
 
 interface IPriceFeed {
     /**
-     * @return uin256 Token/ETH price
-     * @return uint8 the price decimals
+     * @return uin256 Token/ETH price in WAD format
      */
-    function price() external view returns (uint256, uint8);
+    function price() external view returns (uint256);
 }
