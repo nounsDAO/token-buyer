@@ -137,20 +137,6 @@ contract TokenBuyer is Ownable {
      */
 
     /**
-     * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in WAD format.
-     */
-    function tokenAmountNeeded() public view returns (uint256) {
-        uint256 _paymentTokenBalance = paymentTokenBalance();
-        uint256 iouSupply = iouToken.totalSupply();
-        unchecked {
-            if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
-                return 0;
-            }
-            return baselinePaymentTokenAmount + iouSupply - _paymentTokenBalance;
-        }
-    }
-
-    /**
      * @notice Get how much ETH this contract needs in order to fund its current obligations plus `additionalTokens`, with
      * a safety buffer `bufferBPs` basis points.
      * @param additionalTokens an additional amount of `paymentToken` liability to use in this ETH requirement calculation,
@@ -165,6 +151,26 @@ contract TokenBuyer is Ownable {
         uint256 ethCostWithBuffer = (ethCostOfTokens * (bufferBPs + 10_000)) / 10_000;
 
         return ethCostWithBuffer - address(this).balance;
+    }
+
+    /**
+     * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in WAD format.
+     */
+    function tokenAmountNeeded() public view returns (uint256) {
+        uint256 _paymentTokenBalance = paymentTokenBalance();
+        uint256 iouSupply = iouToken.totalSupply();
+        unchecked {
+            if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
+                return 0;
+            }
+            return baselinePaymentTokenAmount + iouSupply - _paymentTokenBalance;
+        }
+    }
+
+    function ethAmountPerTokenAmount(uint256 tokenAmount) public view returns (uint256) {
+        unchecked {
+            return (tokenAmount * price()) / 1 ether;
+        }
     }
 
     function price() public view returns (uint256) {
@@ -239,12 +245,6 @@ contract TokenBuyer is Ownable {
             return balance * paymentTokenToWADFactor;
         } else {
             return balance / paymentTokenToWADFactor;
-        }
-    }
-
-    function ethAmountPerTokenAmount(uint256 tokenAmount) internal view returns (uint256) {
-        unchecked {
-            return (tokenAmount * price()) / 1 ether;
         }
     }
 
