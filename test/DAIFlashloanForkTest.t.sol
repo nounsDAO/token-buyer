@@ -61,7 +61,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         vm.warp(BLOCK_TIMESTAMP);
 
         dai = IERC20(DAI_ADDRESS);
-        priceFeed = new PriceFeed(AggregatorV3Interface(DAI_ETH_CHAINLINK));
+        priceFeed = new PriceFeed(AggregatorV3Interface(DAI_ETH_CHAINLINK), 10 hours);
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
         iou = new IOUToken('IOU Token', 'IOU', owner);

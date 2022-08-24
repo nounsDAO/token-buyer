@@ -23,14 +23,14 @@ import { AggregatorV3Interface } from './AggregatorV3Interface.sol';
 contract PriceFeed is IPriceFeed {
     error StaleOracle(uint256 updatedAt);
 
-    uint256 public constant STALE_AFTER = 10 hours;
-
     AggregatorV3Interface public immutable chainlink;
     uint8 public immutable decimals;
+    uint256 public immutable staleAfter;
 
-    constructor(AggregatorV3Interface _chainlink) {
+    constructor(AggregatorV3Interface _chainlink, uint256 _staleAfter) {
         chainlink = _chainlink;
         decimals = chainlink.decimals();
+        staleAfter = _staleAfter;
     }
 
     /**
@@ -40,7 +40,7 @@ contract PriceFeed is IPriceFeed {
     function price() external view returns (uint256, uint8) {
         (, int256 chainlinkPrice, , uint256 updatedAt, ) = chainlink.latestRoundData();
 
-        if (updatedAt < block.timestamp - STALE_AFTER) {
+        if (updatedAt < block.timestamp - staleAfter) {
             revert StaleOracle(updatedAt);
         }
 
