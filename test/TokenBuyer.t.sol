@@ -9,6 +9,8 @@ import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract TokenBuyerTest is Test {
+    bytes constant STUB_CALLDATA = 'stub calldata';
+
     TokenBuyer buyer;
     TestERC20 paymentToken;
     IOUToken iou;
@@ -19,6 +21,9 @@ contract TokenBuyerTest is Test {
     address owner = address(42);
     address bot = address(99);
     address user = address(1234);
+
+    uint256 tokenAmountOverride;
+    bool overrideTokenAmount;
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
@@ -215,6 +220,86 @@ contract TokenBuyerTest is Test {
 
         assertEq(paymentToken.balanceOf(address(attacker)), toWAD(2000));
         assertEq(address(attacker).balance, 1 ether);
+    }
+
+    function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(this), toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        uint256 balanceBefore = address(this).balance;
+
+        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+
+        assertEq(address(this).balance - balanceBefore, 1 ether);
+    }
+
+    function test_buyETHWithCallback_botCappedToBaselineAmount() public {
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(this), toWAD(4000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        uint256 balanceBefore = address(this).balance;
+
+        buyer.buyETH(toWAD(4000), address(this), STUB_CALLDATA);
+
+        assertEq(address(this).balance - balanceBefore, 1 ether);
+        assertEq(paymentToken.balanceOf(address(this)), toWAD(2000));
+    }
+
+    function test_buyETHWithCallback_revertsWhenContractHasInsufficientETH() public {
+        priceFeed.setPrice(0.0005 ether);
+        paymentToken.mint(address(this), toWAD(4000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        assertEq(address(buyer).balance, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+    }
+
+    function test_buyETHWithCallback_revertsWhenTokenPaymentInsufficient() public {
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(this), toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        tokenAmountOverride = toWAD(2000) - 1;
+        overrideTokenAmount = true;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, toWAD(2000), tokenAmountOverride)
+        );
+        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+    }
+
+    function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
+        MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 10 ether);
+        paymentToken.mint(address(attacker), toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        // TODO this expectRevert DOES NOT WORK; not encoding the expected data properly
+        // bytes memory errorData = abi.encode(address(attacker), toWAD(2000), '');
+        // vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, errorData));
+        // attacker.reenterBuyWithCallback(toWAD(2000));
+    }
+
+    // TODO test re-entrance using both functions
+
+    fallback() external payable {
+        (address sender, uint256 tokenAmount, bytes memory callData) = abi.decode(msg.data, (address, uint256, bytes));
+        assertEq(sender, address(this));
+        assertEq(callData, STUB_CALLDATA);
+
+        if (overrideTokenAmount) {
+            tokenAmount = tokenAmountOverride;
+        }
+        paymentToken.transfer(address(buyer), tokenAmount);
     }
 
     function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {
@@ -440,4 +525,7 @@ contract TokenBuyerTest is Test {
     function toWAD(uint256 amount) public pure returns (uint256) {
         return amount * 10**18;
     }
+
+    // Added this due to a compiler warning
+    receive() external payable {}
 }

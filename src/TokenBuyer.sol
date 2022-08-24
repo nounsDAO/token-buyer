@@ -20,14 +20,16 @@ pragma solidity ^0.8.15;
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
+import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/ReentrancyGuard.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
 
-contract TokenBuyer is Ownable {
+contract TokenBuyer is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error FailedSendingETH(bytes data);
     error FailedWithdrawingETH(bytes data);
+    error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
 
     uint8 public constant WAD_DECIMALS = 18;
 
@@ -93,7 +95,7 @@ contract TokenBuyer is Ownable {
      * not allow double spending or exceeding the contract's {tokenAmountNeeded()}.
      * @param tokenAmountWAD the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in WAD format.
      */
-    function buyETH(uint256 tokenAmountWAD) external payable {
+    function buyETH(uint256 tokenAmountWAD) external {
         uint256 amount = min(tokenAmountWAD, tokenAmountNeeded());
 
         paymentToken.safeTransferFrom(msg.sender, address(this), wadToTokenDecimals(amount));
@@ -103,6 +105,28 @@ contract TokenBuyer is Ownable {
         (bool sent, bytes memory data) = msg.sender.call{ value: ethAmount }('');
         if (!sent) {
             revert FailedSendingETH(data);
+        }
+    }
+
+    function buyETH(
+        uint256 tokenAmountWAD,
+        address to,
+        bytes calldata data
+    ) external nonReentrant {
+        uint256 amount = min(tokenAmountWAD, tokenAmountNeeded());
+        uint256 ethAmount = ethAmountPerTokenAmount(amount);
+
+        uint256 balanceBefore = paymentTokenBalance();
+
+        // If contract balance is insufficient it reverts
+        (bool sent, bytes memory ethSendData) = to.call{ value: ethAmount }(abi.encode(msg.sender, amount, data));
+        if (!sent) {
+            revert FailedSendingETH(ethSendData);
+        }
+
+        uint256 tokensReceived = paymentTokenBalance() - balanceBefore;
+        if (tokensReceived < amount) {
+            revert ReceivedInsufficientTokens(amount, tokensReceived);
         }
     }
 
