@@ -168,8 +168,10 @@ contract TokenBuyer is Ownable {
     }
 
     function price() public view returns (uint256) {
-        uint256 tokenPrice = priceFeed.price();
-        return (tokenPrice * (botIncentiveBPs + 10_000)) / 10_000;
+        unchecked {
+            uint256 tokenPrice = priceFeed.price();
+            return (tokenPrice * (botIncentiveBPs + 10_000)) / 10_000;
+        }
     }
 
     /**
@@ -241,7 +243,9 @@ contract TokenBuyer is Ownable {
     }
 
     function ethAmountPerTokenAmount(uint256 tokenAmount) internal view returns (uint256) {
-        return (tokenAmount * price()) / 1 ether;
+        unchecked {
+            return (tokenAmount * price()) / 1 ether;
+        }
     }
 
     function _redeem(address account, uint256 amountWAD) internal {
@@ -256,12 +260,14 @@ contract TokenBuyer is Ownable {
     }
 
     function wadToTokenDecimals(uint256 value) internal view returns (uint256) {
-        if (WAD_DECIMALS == paymentTokenDecimals) {
-            return value;
-        } else if (WAD_DECIMALS < paymentTokenDecimals) {
-            return value * paymentTokenToWADFactor;
-        } else {
-            return value / paymentTokenToWADFactor;
+        unchecked {
+            if (WAD_DECIMALS == paymentTokenDecimals) {
+                return value;
+            } else if (WAD_DECIMALS < paymentTokenDecimals) {
+                return value * paymentTokenToWADFactor;
+            } else {
+                return value / paymentTokenToWADFactor;
+            }
         }
     }
 
