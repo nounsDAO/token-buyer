@@ -6,20 +6,22 @@ import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { IOUToken } from '../src/IOUToken.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
-import {IWETH} from './helpers/IWETH.sol';
+import { IWETH } from './helpers/IWETH.sol';
 import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
-import {SafeERC20} from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
-import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
+import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
-import {ISwapRouter} from './helpers/univ3/ISwapRouter.sol';
+import { ISwapRouter } from './helpers/univ3/ISwapRouter.sol';
 import { IUniswapV3PoolState } from './helpers/univ3/IUniswapV3PoolState.sol';
 import { IUniswapV3PoolDerivedState } from './helpers/univ3/IUniswapV3PoolDerivedState.sol';
-import {IUniswapV3FlashCallback} from './helpers/univ3/IUniswapV3FlashCallback.sol';
-import {IUniswapV3PoolActions} from './helpers/univ3/IUniswapV3PoolActions.sol';
+import { IUniswapV3FlashCallback } from './helpers/univ3/IUniswapV3FlashCallback.sol';
+import { IUniswapV3PoolActions } from './helpers/univ3/IUniswapV3PoolActions.sol';
 import { TickMath } from './helpers/univ3/TickMath.sol';
-import {PoolAddress} from './helpers/univ3/PoolAddress.sol';
 
 contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
+    using SafeERC20 for IERC20;
+    using SafeCast for uint256;
+    using SafeCast for int256;
+
     string constant MAINNET_RPC_ENVVAR = 'MAINNET_RPC';
     uint256 constant MAINNET_BLOCK_NUMBER = 15367427;
     uint256 constant BLOCK_TIMESTAMP = 1660858991;
@@ -28,7 +30,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
     address constant DAI_ETH_CHAINLINK = 0x773616E4d11A78F511299002da57A0a94577F1f4;
-    
+
     // UNISWAP V3
     address constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
     address constant UNIV3_DAI_ETH2 = 0x60594a405d53811d3BC4766596EFD80fd545A270;
@@ -37,6 +39,8 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     uint24 constant DAI_USDC_POOL_FEE = 100;
 
     uint256 constant DAI_BUYER_WANTS = 100_000 ether;
+
+    address constant BIG_DAI_HOLDER = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
 
     IERC20 dai;
     TokenBuyer buyer;
@@ -48,10 +52,11 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     address owner = address(42);
     address bot = address(99);
     address user = address(1234);
+    address anyone = address(9999);
 
     ISwapRouter swapRouter;
 
-    function setUp() public {        
+    function setUp() public {
         vm.createSelectFork(vm.envString(MAINNET_RPC_ENVVAR), MAINNET_BLOCK_NUMBER);
         vm.warp(BLOCK_TIMESTAMP);
 
@@ -70,72 +75,90 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         vm.stopPrank();
     }
 
-    function testBla() public {
+    function test_fullProposalFlow_partialIOUUsage() public {
+        uint256 baselineDAI = DAI_BUYER_WANTS;
+        uint256 proposalAmount = baselineDAI * 3;
+
+        vm.deal(address(buyer), 1_000 ether);
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(baselineDAI);
+
+        fundBotWithDAI(buyer.tokenAmountNeeded());
+        sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
+
+        vm.prank(owner);
+        buyer.sendOrMint(user, proposalAmount);
+
+        assertEq(dai.balanceOf(user), baselineDAI);
+        assertEq(iou.balanceOf(user), baselineDAI * 2);
+
+        fundBotWithDAI(buyer.tokenAmountNeeded());
+        sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
+
+        vm.prank(anyone);
+        buyer.redeem(user);
+
+        assertEq(dai.balanceOf(user), proposalAmount);
+        assertEq(iou.balanceOf(user), 0);
+    }
+
+    function test_botUsingUniswapV3_makesGrossMargin() public {
         vm.deal(address(buyer), 1_000 ether);
 
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(DAI_BUYER_WANTS);
 
-        (uint256 daiPrice, ) = priceFeed.price();
-        uint256 priceX96Twap = getPriceX96FromSqrtPriceX96(getSqrtTwapX96(UNIV3_DAI_ETH2, 0));
-        
-        console.log('chainlink price ', daiPrice);
-        console.log('uniswap price ', priceX96Twap);
-
-        console.log('chainlink 1 ether in DAI ', 1 ether / daiPrice);
-        console.log('uniswap 1 ether in DAI ', 1 ether / priceX96Twap);
-
-        assertEq(dai.balanceOf(user), 0);
-        IUniswapV3PoolActions(UNIV3_DAI_USDC).flash(user, DAI_BUYER_WANTS, 0, abi.encode("callback verification data should go here"));
+        IUniswapV3PoolActions(UNIV3_DAI_USDC).flash(
+            user,
+            DAI_BUYER_WANTS,
+            0,
+            abi.encode('callback verification data should go here')
+        );
+        // this test continues in `uniswapV3FlashCallback`
+        // showing the flow a bot might execute to arbitrage using TokenBuyer and a flash loan
     }
 
     /// @notice Called to `msg.sender` after transferring to the recipient from IUniswapV3Pool#flash.
-    /// @dev In the implementation you must repay the pool the tokens sent by flash plus the computed fee amounts.
-    /// The caller of this method must be checked to be a UniswapV3Pool deployed by the canonical UniswapV3Factory.
-    /// @param fee0 The fee amount in token0 due to the pool by the end of the flash
-    /// @param fee1 The fee amount in token1 due to the pool by the end of the flash
-    /// @param data Any data passed through by the caller via the IUniswapV3PoolActions#flash call
     function uniswapV3FlashCallback(
         uint256 fee0,
-        uint256 fee1,
-        bytes calldata data
+        uint256,
+        bytes calldata
     ) external override {
         // in real life we would verify callback data
 
         assertEq(dai.balanceOf(user), DAI_BUYER_WANTS);
 
-        vm.startPrank(user);
-
-        dai.approve(address(buyer), DAI_BUYER_WANTS);
-        buyer.buyETH(DAI_BUYER_WANTS);
-        uint256 ethBalance = user.balance;
-
-        SafeERC20.safeApprove(IERC20(WETH_ADDRESS), address(swapRouter), ethBalance);
-        IWETH(WETH_ADDRESS).deposit{value: ethBalance}();
-        assertEq(IERC20(WETH_ADDRESS).balanceOf(user), ethBalance);
-
-        uint256 amountOut = swapRouter.exactInputSingle(
-                ISwapRouter.ExactInputSingleParams({
-                    tokenIn: WETH_ADDRESS,
-                    tokenOut: DAI_ADDRESS,
-                    fee: DAI_ETH2_POOL_FEE,
-                    recipient: user,
-                    deadline: block.timestamp + 200,
-                    amountIn: ethBalance,
-                    amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
-                })
-            );
+        sellDAIToTokenBuyer(user, DAI_BUYER_WANTS);
+        uint256 grossDAI = swapETHForDAI(user, user.balance);
 
         uint256 flashloanPaybackAmount = DAI_BUYER_WANTS + fee0;
+        vm.prank(user);
         dai.transfer(msg.sender, flashloanPaybackAmount);
 
-        vm.stopPrank();
-
-        uint256 earningsBeforeGas = (amountOut - flashloanPaybackAmount) / 1 ether;
-
+        uint256 earningsBeforeGas = (grossDAI - flashloanPaybackAmount) / 1 ether;
         assertGt(earningsBeforeGas, 700);
-        console.log('earningsBeforeGas ', earningsBeforeGas, 'DAI');
+    }
+
+    function swapETHForDAI(address who, uint256 amountIn) internal returns (uint256 amountOut) {
+        vm.startPrank(who);
+
+        IERC20(WETH_ADDRESS).safeApprove(address(swapRouter), amountIn);
+        IWETH(WETH_ADDRESS).deposit{ value: amountIn }();
+
+        amountOut = swapRouter.exactInputSingle(
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: WETH_ADDRESS,
+                tokenOut: DAI_ADDRESS,
+                fee: DAI_ETH2_POOL_FEE,
+                recipient: user,
+                deadline: block.timestamp + 200,
+                amountIn: amountIn,
+                amountOutMinimum: 0,
+                sqrtPriceLimitX96: 0
+            })
+        );
+
+        vm.stopPrank();
     }
 
     function getPriceX96FromSqrtPriceX96(uint160 sqrtPriceX96) public pure returns (uint256 priceX96) {
@@ -154,9 +177,19 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
             (int56[] memory tickCumulatives, ) = IUniswapV3PoolDerivedState(uniswapV3Pool).observe(secondsAgos);
 
             int56 tickDiff = (tickCumulatives[1] - tickCumulatives[0]);
-            tickDiff / SafeCast.toInt56(SafeCast.toInt256(uint256(twapInterval)));
-            
-            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(int24(tickDiff / SafeCast.toInt56(SafeCast.toInt256(uint256(twapInterval)))));            
+            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(int24(tickDiff / uint256(twapInterval).toInt256().toInt56()));
         }
+    }
+
+    function fundBotWithDAI(uint256 amount) internal {
+        vm.prank(BIG_DAI_HOLDER);
+        dai.transfer(bot, amount);
+    }
+
+    function sellDAIToTokenBuyer(address who, uint256 amount) internal {
+        vm.startPrank(who);
+        dai.approve(address(buyer), amount);
+        buyer.buyETH(amount);
+        vm.stopPrank();
     }
 }
