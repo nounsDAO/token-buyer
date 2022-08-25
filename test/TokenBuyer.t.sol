@@ -283,10 +283,10 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
 
-        // TODO this expectRevert DOES NOT WORK; not encoding the expected data properly
+        // TODO expectRevert with this data did not work when the error contained call return data; not encoding the expected data properly
         // bytes memory errorData = abi.encode(address(attacker), toWAD(2000), '');
-        // vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, errorData));
-        // attacker.reenterBuyWithCallback(toWAD(2000));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        attacker.reenterBuyWithCallback(toWAD(2000));
     }
 
     // TODO test re-entrance using both functions

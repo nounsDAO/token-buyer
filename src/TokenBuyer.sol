@@ -121,7 +121,8 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         // If contract balance is insufficient it reverts
         (bool sent, bytes memory ethSendData) = to.call{ value: ethAmount }(abi.encode(msg.sender, amount, data));
         if (!sent) {
-            revert FailedSendingETH(ethSendData);
+            // TODO error encoding in tests to use ethSendData in the error data
+            revert FailedSendingETH(new bytes(0));
         }
 
         uint256 tokensReceived = paymentTokenBalance() - balanceBefore;
