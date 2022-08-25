@@ -46,7 +46,8 @@ contract MaliciousBuyer {
         if (!calledTwice) {
             calledTwice = true;
             buyer.buyETH(tokenAmount, address(this), '');
+        } else {
+            token.transfer(address(buyer), tokenAmount);
         }
-        token.transfer(address(buyer), tokenAmount);
     }
 }
