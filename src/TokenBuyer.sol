@@ -166,6 +166,11 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         return ethCostWithBuffer - address(this).balance;
     }
 
+    function tokenAmountNeededAndETHPayout() public view returns (uint256 tokenAmount, uint256 ethAmount) {
+        tokenAmount = tokenAmountNeeded();
+        ethAmount = ethAmountPerTokenAmount(tokenAmount);
+    }
+
     /**
      * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in WAD format.
      */

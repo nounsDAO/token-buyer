@@ -94,6 +94,17 @@ contract TokenBuyerTest is Test {
         assertEq(buyer.tokenAmountNeeded(), toWAD(69_000));
     }
 
+    function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+        priceFeed.setPrice(0.0005 ether);
+
+        (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
+
+        assertEq(tokenAmount, toWAD(100_000));
+        assertEq(ethAmount, 50 ether);
+    }
+
     function test_price_botIncentiveZero() public {
         priceFeed.setPrice(1234 gwei);
 
