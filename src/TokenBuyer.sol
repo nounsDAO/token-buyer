@@ -95,17 +95,12 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
      * not allow double spending or exceeding the contract's {tokenAmountNeeded()}.
      * @param tokenAmountWAD the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in WAD format.
      */
-    function buyETH(uint256 tokenAmountWAD) external {
+    function buyETH(uint256 tokenAmountWAD) external nonReentrant {
         uint256 amount = min(tokenAmountWAD, tokenAmountNeeded());
 
         paymentToken.safeTransferFrom(msg.sender, address(this), wadToTokenDecimals(amount));
 
-        uint256 ethAmount = ethAmountPerTokenAmount(amount);
-        // If contract balance is insufficient it reverts
-        (bool sent, bytes memory data) = msg.sender.call{ value: ethAmount }('');
-        if (!sent) {
-            revert FailedSendingETH(data);
-        }
+        safeSendETH(msg.sender, ethAmountPerTokenAmount(amount), '');
     }
 
     function buyETH(
@@ -114,16 +109,9 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         bytes calldata data
     ) external nonReentrant {
         uint256 amount = min(tokenAmountWAD, tokenAmountNeeded());
-        uint256 ethAmount = ethAmountPerTokenAmount(amount);
-
         uint256 balanceBefore = paymentTokenBalance();
 
-        // If contract balance is insufficient it reverts
-        (bool sent, bytes memory ethSendData) = to.call{ value: ethAmount }(abi.encode(msg.sender, amount, data));
-        if (!sent) {
-            // TODO error encoding in tests to use ethSendData in the error data
-            revert FailedSendingETH(new bytes(0));
-        }
+        safeSendETH(to, ethAmountPerTokenAmount(amount), abi.encode(msg.sender, amount, data));
 
         uint256 tokensReceived = paymentTokenBalance() - balanceBefore;
         if (tokensReceived < amount) {
@@ -260,6 +248,19 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
       INTERNAL FUNCTIONS
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
+
+    function safeSendETH(
+        address to,
+        uint256 ethAmount,
+        bytes memory data
+    ) internal {
+        // If contract balance is insufficient it reverts
+        (bool sent, ) = to.call{ value: ethAmount }(data);
+        if (!sent) {
+            // TODO solve error encoding in tests to use add returned data in the error
+            revert FailedSendingETH(new bytes(0));
+        }
+    }
 
     function paymentTokenBalance() internal view returns (uint256) {
         uint256 balance = paymentToken.balanceOf(address(this));

@@ -188,7 +188,7 @@ contract TokenBuyerTest is Test {
         buyer.buyETH(toWAD(2000));
     }
 
-    function test_buyETH_maliciousBuyerCantDoubleSpend() public {
+    function test_buyETH_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
@@ -199,27 +199,8 @@ contract TokenBuyerTest is Test {
         vm.prank(address(attacker));
         paymentToken.approve(address(buyer), toWAD(4000));
 
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
         attacker.attack(toWAD(2000));
-
-        assertEq(paymentToken.balanceOf(address(attacker)), 0);
-        assertEq(address(attacker).balance, 2 ether);
-    }
-
-    function test_buyETH_maliciousBuyerCantExceedTokensNeeded() public {
-        MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(0.0005 ether);
-        vm.deal(address(buyer), 10 ether);
-        paymentToken.mint(address(attacker), toWAD(4000));
-        vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
-
-        vm.prank(address(attacker));
-        paymentToken.approve(address(buyer), toWAD(4000));
-
-        attacker.attack(toWAD(2000));
-
-        assertEq(paymentToken.balanceOf(address(attacker)), toWAD(2000));
-        assertEq(address(attacker).balance, 1 ether);
     }
 
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
@@ -289,7 +270,17 @@ contract TokenBuyerTest is Test {
         attacker.reenterBuyWithCallback(toWAD(2000));
     }
 
-    // TODO test re-entrance using both functions
+    function test_buyETHWithCallback_maliciousBuyerCantReenterOtherBuyETHFunction() public {
+        MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 10 ether);
+        paymentToken.mint(address(attacker), toWAD(2000));
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        attacker.reenterBuyNoCallback(toWAD(2000));
+    }
 
     fallback() external payable {
         (address sender, uint256 tokenAmount, bytes memory callData) = abi.decode(msg.data, (address, uint256, bytes));

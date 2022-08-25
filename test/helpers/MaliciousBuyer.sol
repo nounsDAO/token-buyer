@@ -18,6 +18,7 @@ contract MaliciousBuyer {
     TokenBuyerLike buyer;
     IERC20 token;
     bool calledTwice;
+    bool reenterWithCallback;
 
     constructor(address _buyer, IERC20 _token) {
         buyer = TokenBuyerLike(_buyer);
@@ -37,17 +38,27 @@ contract MaliciousBuyer {
     }
 
     function reenterBuyWithCallback(uint256 tokenAmountWAD) public {
-        console.log('reenterBuyWithCallback with amount ', tokenAmountWAD);
+        reenterWithCallback = true;
+        buyer.buyETH(tokenAmountWAD, address(this), '');
+    }
+
+    function reenterBuyNoCallback(uint256 tokenAmountWAD) public {
+        reenterWithCallback = false;
         buyer.buyETH(tokenAmountWAD, address(this), '');
     }
 
     fallback() external payable {
         (, uint256 tokenAmount, ) = abi.decode(msg.data, (address, uint256, bytes));
-        if (!calledTwice) {
-            calledTwice = true;
-            buyer.buyETH(tokenAmount, address(this), '');
+        if (reenterWithCallback) {
+            if (!calledTwice) {
+                calledTwice = true;
+                buyer.buyETH(tokenAmount, address(this), '');
+            } else {
+                token.transfer(address(buyer), tokenAmount);
+            }
         } else {
-            token.transfer(address(buyer), tokenAmount);
+            token.approve(address(buyer), tokenAmount);
+            buyer.buyETH(tokenAmount);
         }
     }
 }
