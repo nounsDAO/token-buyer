@@ -23,6 +23,11 @@ import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/Sa
 import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IOUToken } from './IOUToken.sol';
 
+/**
+ * @notice Use this contract to send ERC20 payments, where the ERC20 balance is supplied by {TokenBuyer}. In case of a payment
+ * that exceeds the current balance, {Payer} mints {IOUToken}s to the recipient; those tokens can later be redeemed for the payment
+ * ERC20 token once there's sufficient balance.
+ */
 contract Payer is Ownable {
     using SafeERC20 for IERC20Metadata;
 

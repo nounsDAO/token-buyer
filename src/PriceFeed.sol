@@ -21,6 +21,9 @@ import { IPriceFeed } from './IPriceFeed.sol';
 import { AggregatorV3Interface } from './AggregatorV3Interface.sol';
 import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
+/**
+ * @notice Provides price data to {TokenBuyer}.
+ */
 contract PriceFeed is IPriceFeed {
     using SafeCast for int256;
 

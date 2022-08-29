@@ -26,6 +26,10 @@ import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
 
+/**
+ * @notice Use this contract to exchange ETH for any ERC20 token at oracle prices.
+ * @dev Inspired by https://github.com/banteg/yfi-buyer.
+ */
 contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20Metadata;
 
