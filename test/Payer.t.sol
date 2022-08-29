@@ -19,13 +19,22 @@ contract PayerTest is Test {
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
-        iou = new IOUToken('IOU Token', 'IOU', owner);
+        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
         payer = new Payer(owner, paymentToken, iou, buyer);
 
         vm.startPrank(owner);
         iou.grantRole(iou.MINTER_ROLE(), address(payer));
         iou.grantRole(iou.BURNER_ROLE(), address(payer));
         vm.stopPrank();
+    }
+
+    function test_constructor_revertsWhenIOUAndPaymenTokenHaveDifferentDecimals() public {
+        uint8 differentDecimals = 42;
+        TestERC20 pToken = new TestERC20('Payment Token', 'PAY');
+        IOUToken iouToken = new IOUToken('IOU Token', 'IOU', differentDecimals, owner);
+
+        vm.expectRevert(abi.encodeWithSelector(Payer.DecimalsMismatch.selector, 18, 42));
+        payer = new Payer(owner, pToken, iouToken, address(0));
     }
 
     function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {

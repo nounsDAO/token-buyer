@@ -66,7 +66,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         priceFeed = new PriceFeed(AggregatorV3Interface(DAI_ETH_CHAINLINK), 10 hours);
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
-        iou = new IOUToken('IOU Token', 'IOU', owner);
+        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
         payer = new Payer(owner, dai, iou, address(0));
 
         botIncentiveBPs = 50;

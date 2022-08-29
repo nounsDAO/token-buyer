@@ -28,11 +28,16 @@ contract IOUToken is ERC20, AccessControlEnumerable {
     bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
     bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
 
+    uint8 public _decimals;
+
     constructor(
         string memory name_,
         string memory symbol_,
+        uint8 decimals_,
         address admin
     ) ERC20(name_, symbol_) {
+        _decimals = decimals_;
+
         _setRoleAdmin(ADMIN_ROLE, ADMIN_ROLE);
         _setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
         _setRoleAdmin(BURNER_ROLE, ADMIN_ROLE);
@@ -47,5 +52,9 @@ contract IOUToken is ERC20, AccessControlEnumerable {
     // TODO add permissions
     function burn(address account, uint256 amount) public onlyRole(BURNER_ROLE) {
         _burn(account, amount);
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return _decimals;
     }
 }

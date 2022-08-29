@@ -29,7 +29,7 @@ contract TokenBuyerTest is Test {
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
-        iou = new IOUToken('IOU Token', 'IOU', owner);
+        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
         priceFeed = new TestPriceFeed();
 
         payer = new Payer(owner, paymentToken, iou, address(0));
