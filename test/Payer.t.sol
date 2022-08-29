@@ -126,40 +126,41 @@ contract PayerTest is Test {
         assertEq(paymentToken.balanceOf(address(payer)), toWAD(100_000));
     }
 
-    function test_redeem_withExplicitAmount_givenNoIOUBalanceDoesNothing() public {
-        paymentToken.mint(address(payer), toWAD(100_000));
+    function test_redeem_withExplicitAmount_givenSufficientBalancesTransfersRequestedAmount() public {
+        uint256 amount = toWAD(100_000);
+        vm.prank(address(payer));
+        iou.mint(user, amount);
+        paymentToken.mint(address(payer), amount);
 
-        payer.redeem(user, toWAD(100_000));
-
+        payer.redeem(user, amount);
         assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(address(payer)), toWAD(100_000));
+        assertEq(paymentToken.balanceOf(user), amount);
+        assertEq(paymentToken.balanceOf(address(payer)), 0);
     }
 
-    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsRedeemsIOUBalance() public {
+    function test_redeem_withExplicitAmount_revertsGivenNoIOUBalance() public {
+        paymentToken.mint(address(payer), toWAD(100_000));
+
+        vm.expectRevert('ERC20: burn amount exceeds balance');
+        payer.redeem(user, toWAD(100_000));
+    }
+
+    function test_redeem_withExplicitAmount_revertsGivenAmountHigherThanIOUs() public {
         paymentToken.mint(address(payer), toWAD(100_000));
         vm.prank(address(payer));
         iou.mint(user, toWAD(42_000));
 
+        vm.expectRevert('ERC20: burn amount exceeds balance');
         payer.redeem(user, toWAD(69_000));
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
-        assertEq(paymentToken.balanceOf(address(payer)), toWAD(58_000));
     }
 
-    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsAndPaymentTokenBalanceRedeemsAllTokenBalance()
-        public
-    {
+    function test_redeem_withExplicitAmount_revertsGivenAmountHigherThanPaymentTokenBalance() public {
         paymentToken.mint(address(payer), toWAD(42_000));
         vm.prank(address(payer));
         iou.mint(user, toWAD(69_000));
 
-        payer.redeem(user, toWAD(100_000));
-
-        assertEq(iou.balanceOf(user), toWAD(27_000));
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
-        assertEq(paymentToken.balanceOf(address(payer)), 0);
+        vm.expectRevert('ERC20: transfer amount exceeds balance');
+        payer.redeem(user, toWAD(69_000));
     }
 
     function toWAD(uint256 amount) public pure returns (uint256) {

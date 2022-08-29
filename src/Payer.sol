@@ -95,8 +95,6 @@ contract Payer is Ownable {
     }
 
     function redeem(address account, uint256 amount) external {
-        amount = min(amount, iouToken.balanceOf(account));
-        amount = min(amount, paymentToken.balanceOf(address(this)));
         _redeem(account, amount);
     }
 
