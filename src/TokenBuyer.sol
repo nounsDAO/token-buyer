@@ -22,6 +22,7 @@ import { Pausable } from 'openzeppelin-contracts/contracts/security/Pausable.sol
 import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/ReentrancyGuard.sol';
+import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
 
@@ -127,7 +128,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
      */
     function buyETH(uint256 tokenAmount) external nonReentrant whenNotPaused {
-        uint256 amount = min(tokenAmount, tokenAmountNeeded());
+        uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
 
         paymentToken.safeTransferFrom(msg.sender, payer, amount);
 
@@ -139,7 +140,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         address to,
         bytes calldata data
     ) external nonReentrant whenNotPaused {
-        uint256 amount = min(tokenAmount, tokenAmountNeeded());
+        uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
         uint256 balanceBefore = paymentToken.balanceOf(address(this));
 
         safeSendETH(to, ethAmountPerTokenAmount(amount), abi.encode(msg.sender, amount, data));
@@ -304,9 +305,5 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
             // TODO solve error encoding in tests to use add returned data in the error
             revert FailedSendingETH(new bytes(0));
         }
-    }
-
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
     }
 }

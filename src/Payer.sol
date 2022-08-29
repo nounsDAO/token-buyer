@@ -20,6 +20,7 @@ pragma solidity ^0.8.15;
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
+import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IOUToken } from './IOUToken.sol';
 
 contract Payer is Ownable {
@@ -88,7 +89,7 @@ contract Payer is Ownable {
      * @param account the account whose IOU tokens to redeem in exchange for `paymentToken`s.
      */
     function redeem(address account) external {
-        uint256 amount = min(iouToken.balanceOf(account), paymentToken.balanceOf(address(this)));
+        uint256 amount = Math.min(iouToken.balanceOf(account), paymentToken.balanceOf(address(this)));
         _redeem(account, amount);
     }
 
@@ -101,10 +102,6 @@ contract Payer is Ownable {
             iouToken.burn(account, amount);
             paymentToken.safeTransfer(account, amount);
         }
-    }
-
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
     }
 
     function setTokenBuyer(address newBuyer) public onlyOwner {
