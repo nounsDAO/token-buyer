@@ -3,6 +3,7 @@ pragma solidity ^0.8.15;
 
 import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
+import { Payer } from '../src/Payer.sol';
 import { TestERC20 } from './helpers/TestERC20.sol';
 import { IOUToken } from '../src/IOUToken.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
@@ -12,6 +13,7 @@ contract TokenBuyerTest is Test {
     bytes constant STUB_CALLDATA = 'stub calldata';
 
     TokenBuyer buyer;
+    Payer payer;
     TestERC20 paymentToken;
     IOUToken iou;
     TestPriceFeed priceFeed;
@@ -30,11 +32,25 @@ contract TokenBuyerTest is Test {
         iou = new IOUToken('IOU Token', 'IOU', owner);
         priceFeed = new TestPriceFeed();
 
-        buyer = new TokenBuyer(paymentToken, 18, iou, priceFeed, baselinePaymentTokenAmount, botIncentiveBPs, owner);
+        payer = new Payer(owner, paymentToken, iou, address(0));
+
+        buyer = new TokenBuyer(
+            paymentToken,
+            18,
+            iou,
+            priceFeed,
+            baselinePaymentTokenAmount,
+            botIncentiveBPs,
+            owner,
+            address(payer)
+        );
+
+        vm.prank(owner);
+        payer.setTokenBuyer(address(buyer));
 
         vm.startPrank(owner);
-        iou.grantRole(iou.MINTER_ROLE(), address(buyer));
-        iou.grantRole(iou.BURNER_ROLE(), address(buyer));
+        iou.grantRole(iou.MINTER_ROLE(), address(payer));
+        iou.grantRole(iou.BURNER_ROLE(), address(payer));
         vm.stopPrank();
     }
 
@@ -64,7 +80,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_tokenAmountNeeded_iouSupplyOnly() public {
-        vm.prank(address(buyer));
+        vm.prank(address(payer));
         iou.mint(address(1), toWAD(42_000));
 
         assertEq(buyer.tokenAmountNeeded(), toWAD(42_000));
@@ -88,7 +104,7 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
         paymentToken.mint(address(buyer), toWAD(42_000));
-        vm.prank(address(buyer));
+        vm.prank(address(payer));
         iou.mint(address(1), toWAD(11_000));
 
         assertEq(buyer.tokenAmountNeeded(), toWAD(69_000));
@@ -304,126 +320,6 @@ contract TokenBuyerTest is Test {
         paymentToken.transfer(address(buyer), tokenAmount);
     }
 
-    function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {
-        uint256 amount = toWAD(100_000);
-        vm.prank(owner);
-        buyer.sendOrMint(user, amount);
-
-        assertEq(iou.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(user), 0);
-    }
-
-    function test_sendOrMint_givenEnoughPaymentTokenPaysInToken() public {
-        uint256 amount = toWAD(100_000);
-        paymentToken.mint(address(buyer), amount);
-        vm.prank(owner);
-        buyer.sendOrMint(user, amount);
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), amount);
-    }
-
-    function test_sendOrMint_givenPartialPaymentTokenBalancePaysInBoth() public {
-        uint256 amount = toWAD(100_000);
-        paymentToken.mint(address(buyer), toWAD(42_000));
-        vm.prank(owner);
-        buyer.sendOrMint(user, amount);
-
-        assertEq(iou.balanceOf(user), toWAD(58_000));
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
-    }
-
-    function test_sendOrMint_zeroDoesntRevert() public {
-        vm.prank(owner);
-        buyer.sendOrMint(user, 0);
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
-    }
-
-    function test_redeem_givenEnoughPaymentTokenSendsFullAmount() public {
-        uint256 amount = toWAD(100_000);
-        vm.prank(address(buyer));
-        iou.mint(user, amount);
-        paymentToken.mint(address(buyer), amount);
-
-        buyer.redeem(user);
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(address(buyer)), 0);
-    }
-
-    function test_redeem_givenPartialPaymentTokenSendsPartialAmount() public {
-        uint256 amount = toWAD(100_000);
-        vm.prank(address(buyer));
-        iou.mint(user, amount);
-        paymentToken.mint(address(buyer), amount - 1);
-
-        buyer.redeem(user);
-
-        assertEq(iou.balanceOf(user), 1);
-        assertEq(paymentToken.balanceOf(user), amount - 1);
-        assertEq(paymentToken.balanceOf(address(buyer)), 0);
-    }
-
-    function test_redeem_givenNoPaymentTokenSendsNothing() public {
-        uint256 amount = toWAD(100_000);
-        vm.prank(address(buyer));
-        iou.mint(user, amount);
-
-        buyer.redeem(user);
-
-        assertEq(iou.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(user), 0);
-    }
-
-    function test_redeem_givenNoIOUBalanceSendsNothing() public {
-        paymentToken.mint(address(buyer), toWAD(100_000));
-
-        buyer.redeem(user);
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(100_000));
-    }
-
-    function test_redeem_withExplicitAmount_givenNoIOUBalanceDoesNothing() public {
-        paymentToken.mint(address(buyer), toWAD(100_000));
-
-        buyer.redeem(user, toWAD(100_000));
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(100_000));
-    }
-
-    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsRedeemsIOUBalance() public {
-        paymentToken.mint(address(buyer), toWAD(100_000));
-        vm.prank(address(buyer));
-        iou.mint(user, toWAD(42_000));
-
-        buyer.redeem(user, toWAD(69_000));
-
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
-        assertEq(paymentToken.balanceOf(address(buyer)), toWAD(58_000));
-    }
-
-    function test_redeem_withExplicitAmount_givenAmountHigherThanIOUsAndPaymentTokenBalanceRedeemsAllTokenBalance()
-        public
-    {
-        paymentToken.mint(address(buyer), toWAD(42_000));
-        vm.prank(address(buyer));
-        iou.mint(user, toWAD(69_000));
-
-        buyer.redeem(user, toWAD(100_000));
-
-        assertEq(iou.balanceOf(user), toWAD(27_000));
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
-        assertEq(paymentToken.balanceOf(address(buyer)), 0);
-    }
-
     function test_happyFlow_payingFullyInPaymentToken() public {
         priceFeed.setPrice(0.01 ether);
         vm.prank(owner);
@@ -447,7 +343,7 @@ contract TokenBuyerTest is Test {
 
         // send or mint (42K)
         vm.prank(owner);
-        buyer.sendOrMint(user, toWAD(42_000));
+        payer.sendOrMint(user, toWAD(42_000));
 
         // user gets sent that amount right away
         assertEq(iou.balanceOf(user), 0);
@@ -490,7 +386,7 @@ contract TokenBuyerTest is Test {
 
         // send or mint (142K)
         vm.prank(owner);
-        buyer.sendOrMint(user, toWAD(142_000));
+        payer.sendOrMint(user, toWAD(142_000));
         assertEq(iou.balanceOf(user), toWAD(42_000));
         assertEq(paymentToken.balanceOf(user), toWAD(100_000));
 
@@ -508,7 +404,7 @@ contract TokenBuyerTest is Test {
         assertEq(bot.balance, 1010 ether + 4242 * 10**17);
 
         // anyone can redeem user's remaining balance(42K)
-        buyer.redeem(user);
+        payer.redeem(user);
         assertEq(iou.balanceOf(user), 0);
         assertEq(paymentToken.balanceOf(user), toWAD(142_000));
 

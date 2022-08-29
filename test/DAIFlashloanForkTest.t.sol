@@ -3,11 +3,12 @@ pragma solidity ^0.8.15;
 
 import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
+import { Payer } from '../src/Payer.sol';
 import { IOUToken } from '../src/IOUToken.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { IWETH } from './helpers/IWETH.sol';
-import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import { ISwapRouter } from './helpers/univ3/ISwapRouter.sol';
@@ -18,7 +19,7 @@ import { IUniswapV3PoolActions } from './helpers/univ3/IUniswapV3PoolActions.sol
 import { TickMath } from './helpers/univ3/TickMath.sol';
 
 contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
     using SafeCast for uint256;
     using SafeCast for int256;
 
@@ -42,8 +43,9 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
     address constant BIG_DAI_HOLDER = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
 
-    IERC20 dai;
+    IERC20Metadata dai;
     TokenBuyer buyer;
+    Payer payer;
     IOUToken iou;
     PriceFeed priceFeed;
     uint256 baselinePaymentTokenAmount;
@@ -60,18 +62,28 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         vm.createSelectFork(vm.envString(MAINNET_RPC_ENVVAR), MAINNET_BLOCK_NUMBER);
         vm.warp(BLOCK_TIMESTAMP);
 
-        dai = IERC20(DAI_ADDRESS);
+        dai = IERC20Metadata(DAI_ADDRESS);
         priceFeed = new PriceFeed(AggregatorV3Interface(DAI_ETH_CHAINLINK), 10 hours);
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
         iou = new IOUToken('IOU Token', 'IOU', owner);
+        payer = new Payer(owner, dai, iou, address(0));
 
         botIncentiveBPs = 50;
-        buyer = new TokenBuyer(dai, 18, iou, priceFeed, baselinePaymentTokenAmount, botIncentiveBPs, owner);
+        buyer = new TokenBuyer(
+            dai,
+            18,
+            iou,
+            priceFeed,
+            baselinePaymentTokenAmount,
+            botIncentiveBPs,
+            owner,
+            address(payer)
+        );
 
         vm.startPrank(owner);
-        iou.grantRole(iou.MINTER_ROLE(), address(buyer));
-        iou.grantRole(iou.BURNER_ROLE(), address(buyer));
+        iou.grantRole(iou.MINTER_ROLE(), address(payer));
+        iou.grantRole(iou.BURNER_ROLE(), address(payer));
         vm.stopPrank();
     }
 
@@ -87,7 +99,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
 
         vm.prank(owner);
-        buyer.sendOrMint(user, proposalAmount);
+        payer.sendOrMint(user, proposalAmount);
 
         assertEq(dai.balanceOf(user), baselineDAI);
         assertEq(iou.balanceOf(user), baselineDAI * 2);
@@ -96,7 +108,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
 
         vm.prank(anyone);
-        buyer.redeem(user);
+        payer.redeem(user);
 
         assertEq(dai.balanceOf(user), proposalAmount);
         assertEq(iou.balanceOf(user), 0);
@@ -142,7 +154,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     function swapETHForDAI(address who, uint256 amountIn) internal returns (uint256 amountOut) {
         vm.startPrank(who);
 
-        IERC20(WETH_ADDRESS).safeApprove(address(swapRouter), amountIn);
+        IERC20Metadata(WETH_ADDRESS).safeApprove(address(swapRouter), amountIn);
         IWETH(WETH_ADDRESS).deposit{ value: amountIn }();
 
         amountOut = swapRouter.exactInputSingle(

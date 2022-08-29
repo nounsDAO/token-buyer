@@ -37,6 +37,7 @@ contract Payer is Ownable {
     address public buyer;
 
     constructor(
+        address _owner,
         IERC20Metadata _paymentToken,
         IOUToken _iouToken,
         address _buyer
@@ -49,6 +50,8 @@ contract Payer is Ownable {
         }
 
         buyer = _buyer;
+
+        _transferOwnership(_owner);
     }
 
     /**
@@ -61,7 +64,7 @@ contract Payer is Ownable {
         if (amount <= paymentTokenBalance) {
             paymentToken.safeTransfer(account, amount);
         } else if (paymentTokenBalance > 0) {
-            paymentToken.safeTransfer(account, amount);
+            paymentToken.safeTransfer(account, paymentTokenBalance);
             iouToken.mint(account, amount - paymentTokenBalance);
         } else {
             iouToken.mint(account, amount);
@@ -106,5 +109,9 @@ contract Payer is Ownable {
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function setTokenBuyer(address newBuyer) public onlyOwner {
+        buyer = newBuyer;
     }
 }
