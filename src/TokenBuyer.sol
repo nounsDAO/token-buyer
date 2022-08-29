@@ -18,18 +18,23 @@
 pragma solidity ^0.8.15;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
+import { Pausable } from 'openzeppelin-contracts/contracts/security/Pausable.sol';
 import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/ReentrancyGuard.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
 
-contract TokenBuyer is Ownable, ReentrancyGuard {
+contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20Metadata;
 
     error FailedSendingETH(bytes data);
     error FailedWithdrawingETH(bytes data);
     error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
+    error OnlyAdmin();
+    error OnlyAdminOrOwner();
+    error InvalidBotIncentiveBPs();
+    error InvalidBaselinePaymentTokenAmount();
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
@@ -46,28 +51,64 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
     /// @notice the minimum `paymentToken` balance this contract should aim to hold, in WAD format.
     uint256 public baselinePaymentTokenAmount;
 
+    uint256 public minAdminBaselinePaymentTokenAmount;
+
+    uint256 public maxAdminBaselinePaymentTokenAmount;
+
     /// @notice the amount of basis points to increase `paymentToken` price by, to increase the incentive to transact with this contract.
     uint16 public botIncentiveBPs;
 
+    uint16 public minAdminBotIncentiveBPs;
+
+    uint16 public maxAdminBotIncentiveBPs;
+
+    address public admin;
+
     address public payer;
+
+    modifier onlyAdmin() {
+        if (admin != msg.sender) {
+            revert OnlyAdmin();
+        }
+        _;
+    }
+
+    modifier onlyAdminOrOwner() {
+        if (admin != msg.sender && owner() != msg.sender) {
+            revert OnlyAdminOrOwner();
+        }
+        _;
+    }
 
     constructor(
         IERC20Metadata _paymentToken,
         IOUToken _iouToken,
         IPriceFeed _priceFeed,
         uint256 _baselinePaymentTokenAmount,
+        uint256 _minAdminBaselinePaymentTokenAmount,
+        uint256 _maxAdminBaselinePaymentTokenAmount,
         uint16 _botIncentiveBPs,
+        uint16 _minAdminBotIncentiveBPs,
+        uint16 _maxAdminBotIncentiveBPs,
         address _owner,
+        address _admin,
         address _payer
     ) {
         paymentToken = _paymentToken;
         paymentTokenDecimalsDigits = 10**_paymentToken.decimals();
         iouToken = _iouToken;
-
         priceFeed = _priceFeed;
+
         baselinePaymentTokenAmount = _baselinePaymentTokenAmount;
+        minAdminBaselinePaymentTokenAmount = _minAdminBaselinePaymentTokenAmount;
+        maxAdminBaselinePaymentTokenAmount = _maxAdminBaselinePaymentTokenAmount;
+
         botIncentiveBPs = _botIncentiveBPs;
+        minAdminBotIncentiveBPs = _minAdminBotIncentiveBPs;
+        maxAdminBotIncentiveBPs = _maxAdminBotIncentiveBPs;
+
         _transferOwnership(_owner);
+        admin = _admin;
 
         payer = _payer;
     }
@@ -85,7 +126,7 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
      * not allow double spending or exceeding the contract's {tokenAmountNeeded()}.
      * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
      */
-    function buyETH(uint256 tokenAmount) external nonReentrant {
+    function buyETH(uint256 tokenAmount) external nonReentrant whenNotPaused {
         uint256 amount = min(tokenAmount, tokenAmountNeeded());
 
         paymentToken.safeTransferFrom(msg.sender, payer, amount);
@@ -97,7 +138,7 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         uint256 tokenAmount,
         address to,
         bytes calldata data
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         uint256 amount = min(tokenAmount, tokenAmountNeeded());
         uint256 balanceBefore = paymentToken.balanceOf(address(this));
 
@@ -171,6 +212,46 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
 
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      ADMIN or OWNER TRANSACTIONS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    function setBotIncentiveBPs(uint16 newBotIncentiveBPs) external onlyAdminOrOwner {
+        if (
+            admin == msg.sender &&
+            (newBotIncentiveBPs < minAdminBotIncentiveBPs || newBotIncentiveBPs > maxAdminBotIncentiveBPs)
+        ) {
+            revert InvalidBotIncentiveBPs();
+        }
+
+        botIncentiveBPs = newBotIncentiveBPs;
+    }
+
+    /**
+     * @param newBaselinePaymentTokenAmount the new `baselinePaymentTokenAmount` in token decimals.
+     */
+    function setBaselinePaymentTokenAmount(uint256 newBaselinePaymentTokenAmount) external onlyAdminOrOwner {
+        if (
+            admin == msg.sender &&
+            (newBaselinePaymentTokenAmount < minAdminBaselinePaymentTokenAmount ||
+                newBaselinePaymentTokenAmount > maxAdminBaselinePaymentTokenAmount)
+        ) {
+            revert InvalidBaselinePaymentTokenAmount();
+        }
+
+        baselinePaymentTokenAmount = newBaselinePaymentTokenAmount;
+    }
+
+    function pause() external onlyAdminOrOwner {
+        _pause();
+    }
+
+    function unpause() external onlyAdminOrOwner {
+        _unpause();
+    }
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       OWNER TRANSACTIONS
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
@@ -182,19 +263,28 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         }
     }
 
-    function setBotIncentiveBPs(uint16 newBotIncentiveBPs) public onlyOwner {
-        botIncentiveBPs = newBotIncentiveBPs;
+    function setMinAdminBotIncentiveBPs(uint16 newMinAdminBotIncentiveBPs) external onlyOwner {
+        minAdminBotIncentiveBPs = newMinAdminBotIncentiveBPs;
     }
 
-    /**
-     * @param newBaselinePaymentTokenAmount the new `baselinePaymentTokenAmount` in token decimals.
-     */
-    function setBaselinePaymentTokenAmount(uint256 newBaselinePaymentTokenAmount) external onlyOwner {
-        baselinePaymentTokenAmount = newBaselinePaymentTokenAmount;
+    function setMaxAdminBotIncentiveBPs(uint16 newMaxAdminBotIncentiveBPs) external onlyOwner {
+        maxAdminBotIncentiveBPs = newMaxAdminBotIncentiveBPs;
+    }
+
+    function setMinAdminBaselinePaymentTokenAmount(uint256 newMinAdminBaselinePaymentTokenAmount) external onlyOwner {
+        minAdminBaselinePaymentTokenAmount = newMinAdminBaselinePaymentTokenAmount;
+    }
+
+    function setMaxAdminBaselinePaymentTokenAmount(uint256 newMaxAdminBaselinePaymentTokenAmount) external onlyOwner {
+        maxAdminBaselinePaymentTokenAmount = newMaxAdminBaselinePaymentTokenAmount;
     }
 
     function setPriceFeed(IPriceFeed newPriceFeed) external onlyOwner {
         priceFeed = newPriceFeed;
+    }
+
+    function setAdmin(address newAdmin) external onlyOwner {
+        admin = newAdmin;
     }
 
     /**

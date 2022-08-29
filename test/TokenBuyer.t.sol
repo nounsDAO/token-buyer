@@ -11,6 +11,7 @@ import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract TokenBuyerTest is Test {
     bytes constant STUB_CALLDATA = 'stub calldata';
+    bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
 
     TokenBuyer buyer;
     Payer payer;
@@ -21,6 +22,7 @@ contract TokenBuyerTest is Test {
     uint16 botIncentiveBPs = 0;
 
     address owner = address(42);
+    address admin = address(43);
     address bot = address(99);
     address user = address(1234);
 
@@ -39,8 +41,13 @@ contract TokenBuyerTest is Test {
             iou,
             priceFeed,
             baselinePaymentTokenAmount,
+            0,
+            toWAD(10_000_000),
             botIncentiveBPs,
+            0,
+            10_000,
             owner,
+            admin,
             address(payer)
         );
 
@@ -56,7 +63,7 @@ contract TokenBuyerTest is Test {
     function test_setPriceFeed_revertsForNonOwner() public {
         TestPriceFeed newFeed = new TestPriceFeed();
 
-        vm.expectRevert('Ownable: caller is not the owner');
+        vm.expectRevert(OWNABLE_ERROR_STRING);
         buyer.setPriceFeed(newFeed);
     }
 
@@ -151,6 +158,14 @@ contract TokenBuyerTest is Test {
         assertEq(price, 8484 gwei);
     }
 
+    function test_buyETH_revertsWhenPaused() public {
+        vm.prank(admin);
+        buyer.pause();
+
+        vm.expectRevert('Pausable: paused');
+        buyer.buyETH(1234);
+    }
+
     function test_buyETH_botBuysExactBaselineAmount() public {
         // Say ETH is worth $2000, then the oracle price denominated in ETH would be
         // 1 / 2000 = 0.0005
@@ -227,6 +242,14 @@ contract TokenBuyerTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
         attacker.attack(toWAD(2000));
+    }
+
+    function test_buyETHWithCallback_revertsWhenPaused() public {
+        vm.prank(admin);
+        buyer.pause();
+
+        vm.expectRevert('Pausable: paused');
+        buyer.buyETH(1234, address(this), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
@@ -417,6 +440,129 @@ contract TokenBuyerTest is Test {
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 4242 * 10**17 + 1010 ether);
+    }
+
+    function test_setBaselinePaymentTokenAmount_adminCall_revertsGivenInputLessThanMin() public {
+        vm.prank(owner);
+        buyer.setMinAdminBaselinePaymentTokenAmount(10_000);
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBaselinePaymentTokenAmount.selector));
+        vm.prank(admin);
+        buyer.setBaselinePaymentTokenAmount(9999);
+    }
+
+    function test_setBaselinePaymentTokenAmount_adminCall_revertsGivenInputGreaterThanMax() public {
+        vm.prank(owner);
+        buyer.setMaxAdminBaselinePaymentTokenAmount(10_000);
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBaselinePaymentTokenAmount.selector));
+        vm.prank(admin);
+        buyer.setBaselinePaymentTokenAmount(10_001);
+    }
+
+    function test_setBaselinePaymentTokenAmount_ownerCall_allowsSetGivenInputLessThanMin() public {
+        vm.prank(owner);
+        buyer.setMinAdminBaselinePaymentTokenAmount(10_000);
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(9999);
+
+        assertEq(9999, buyer.baselinePaymentTokenAmount());
+    }
+
+    function test_setBaselinePaymentTokenAmount_ownerCall_allowsSetGivenInputGreaterThanMax() public {
+        vm.prank(owner);
+        buyer.setMaxAdminBaselinePaymentTokenAmount(10_000);
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(10_001);
+
+        assertEq(10_001, buyer.baselinePaymentTokenAmount());
+    }
+
+    function test_setBotIncentiveBPs_adminCall_revertsGivenInputLessThanMin() public {
+        vm.prank(owner);
+        buyer.setMinAdminBotIncentiveBPs(50);
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotIncentiveBPs.selector));
+        vm.prank(admin);
+        buyer.setBotIncentiveBPs(49);
+    }
+
+    function test_setBotIncentiveBPs_adminCall_revertsGivenInputGreaterThanMax() public {
+        vm.prank(owner);
+        buyer.setMaxAdminBotIncentiveBPs(100);
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotIncentiveBPs.selector));
+        vm.prank(admin);
+        buyer.setBotIncentiveBPs(101);
+    }
+
+    function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputLessThanMin() public {
+        vm.prank(owner);
+        buyer.setMinAdminBotIncentiveBPs(50);
+
+        vm.prank(owner);
+        buyer.setBotIncentiveBPs(49);
+
+        assertEq(49, buyer.botIncentiveBPs());
+    }
+
+    function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputGreaterThanMax() public {
+        vm.prank(owner);
+        buyer.setMaxAdminBotIncentiveBPs(100);
+
+        vm.prank(owner);
+        buyer.setBotIncentiveBPs(101);
+
+        assertEq(101, buyer.botIncentiveBPs());
+    }
+
+    function test_setAdmin_worksForOwner() public {
+        address newAdmin = address(112233);
+        assertFalse(newAdmin == buyer.admin());
+
+        vm.prank(owner);
+        buyer.setAdmin(newAdmin);
+
+        assertEq(newAdmin, buyer.admin());
+    }
+
+    function test_setAdmin_revertsForNonOwner() public {
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.setAdmin(address(112233));
+    }
+
+    function test_pause_unpause_ownerCall_works() public {
+        vm.prank(owner);
+        buyer.pause();
+
+        assertTrue(buyer.paused());
+
+        vm.prank(owner);
+        buyer.unpause();
+
+        assertFalse(buyer.paused());
+    }
+
+    function test_pause_unpause_adminCall_works() public {
+        vm.prank(admin);
+        buyer.pause();
+
+        assertTrue(buyer.paused());
+
+        vm.prank(admin);
+        buyer.unpause();
+
+        assertFalse(buyer.paused());
+    }
+
+    function test_pause_unpause_revertForNonOwnerOrAdmin() public {
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.OnlyAdminOrOwner.selector));
+        buyer.pause();
+
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.OnlyAdminOrOwner.selector));
+        buyer.unpause();
     }
 
     function toWAD(uint256 amount) public pure returns (uint256) {

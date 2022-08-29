@@ -52,6 +52,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     uint16 botIncentiveBPs;
 
     address owner = address(42);
+    address admin = address(43);
     address bot = address(99);
     address user = address(1234);
     address anyone = address(9999);
@@ -70,7 +71,20 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         payer = new Payer(owner, dai, iou, address(0));
 
         botIncentiveBPs = 50;
-        buyer = new TokenBuyer(dai, iou, priceFeed, baselinePaymentTokenAmount, botIncentiveBPs, owner, address(payer));
+        buyer = new TokenBuyer(
+            dai,
+            iou,
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000 * 10e18,
+            botIncentiveBPs,
+            0,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
 
         vm.startPrank(owner);
         iou.grantRole(iou.MINTER_ROLE(), address(payer));
