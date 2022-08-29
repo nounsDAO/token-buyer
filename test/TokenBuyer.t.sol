@@ -36,7 +36,6 @@ contract TokenBuyerTest is Test {
 
         buyer = new TokenBuyer(
             paymentToken,
-            18,
             iou,
             priceFeed,
             baselinePaymentTokenAmount,

@@ -70,16 +70,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         payer = new Payer(owner, dai, iou, address(0));
 
         botIncentiveBPs = 50;
-        buyer = new TokenBuyer(
-            dai,
-            18,
-            iou,
-            priceFeed,
-            baselinePaymentTokenAmount,
-            botIncentiveBPs,
-            owner,
-            address(payer)
-        );
+        buyer = new TokenBuyer(dai, iou, priceFeed, baselinePaymentTokenAmount, botIncentiveBPs, owner, address(payer));
 
         vm.startPrank(owner);
         iou.grantRole(iou.MINTER_ROLE(), address(payer));

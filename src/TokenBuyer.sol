@@ -18,21 +18,21 @@
 pragma solidity ^0.8.15;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
-import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/ReentrancyGuard.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
 
 contract TokenBuyer is Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20Metadata;
 
     error FailedSendingETH(bytes data);
     error FailedWithdrawingETH(bytes data);
     error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
-    IERC20 public immutable paymentToken;
+    IERC20Metadata public immutable paymentToken;
 
     /// @notice 10**paymentTokenDecimals, for the calculation for ETH price
     uint256 public immutable paymentTokenDecimalsDigits;
@@ -52,8 +52,7 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
     address public payer;
 
     constructor(
-        IERC20 _paymentToken,
-        uint8 _paymentTokenDecimals,
+        IERC20Metadata _paymentToken,
         IOUToken _iouToken,
         IPriceFeed _priceFeed,
         uint256 _baselinePaymentTokenAmount,
@@ -62,7 +61,7 @@ contract TokenBuyer is Ownable, ReentrancyGuard {
         address _payer
     ) {
         paymentToken = _paymentToken;
-        paymentTokenDecimalsDigits = 10**_paymentTokenDecimals;
+        paymentTokenDecimalsDigits = 10**_paymentToken.decimals();
         iouToken = _iouToken;
 
         priceFeed = _priceFeed;

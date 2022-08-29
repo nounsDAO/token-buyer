@@ -42,15 +42,13 @@ contract Payer is Ownable {
         IOUToken _iouToken,
         address _buyer
     ) {
-        paymentToken = _paymentToken;
-        iouToken = _iouToken;
-
-        if (paymentToken.decimals() != iouToken.decimals()) {
-            revert DecimalsMismatch(paymentToken.decimals(), iouToken.decimals());
+        if (_paymentToken.decimals() != _iouToken.decimals()) {
+            revert DecimalsMismatch(_paymentToken.decimals(), _iouToken.decimals());
         }
 
+        paymentToken = _paymentToken;
+        iouToken = _iouToken;
         buyer = _buyer;
-
         _transferOwnership(_owner);
     }
 
