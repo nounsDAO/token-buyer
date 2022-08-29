@@ -37,6 +37,11 @@ contract PayerTest is Test {
         payer = new Payer(owner, pToken, iouToken, address(0));
     }
 
+    function test_sendOrMint_revertsWhenCalledByNonOwner() public {
+        vm.expectRevert('Ownable: caller is not the owner');
+        payer.sendOrMint(user, 42);
+    }
+
     function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {
         uint256 amount = toWAD(100_000);
         vm.prank(owner);
