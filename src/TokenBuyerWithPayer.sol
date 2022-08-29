@@ -46,8 +46,8 @@ contract TokenBuyerWithPayer is Ownable, ReentrancyGuard {
     /// @notice the minimum `paymentToken` balance this contract should aim to hold, in WAD format.
     uint256 public baselinePaymentTokenAmount;
 
-    /// @notice the TODO
-    uint16 public botIncentiveFactor;
+    /// @notice the amount of basis points to increase `paymentToken` price by, to increase the incentive to transact with this contract.
+    uint16 public botIncentiveBPs;
 
     address public payer;
 
@@ -67,7 +67,7 @@ contract TokenBuyerWithPayer is Ownable, ReentrancyGuard {
 
         priceFeed = _priceFeed;
         baselinePaymentTokenAmount = _baselinePaymentTokenAmount;
-        setBotIncentiveBPs(_botIncentiveBPs);
+        botIncentiveBPs = _botIncentiveBPs;
         _transferOwnership(_owner);
 
         payer = _payer;
@@ -166,7 +166,7 @@ contract TokenBuyerWithPayer is Ownable, ReentrancyGuard {
 
     function price() public view returns (uint256) {
         unchecked {
-            return priceFeed.price() * botIncentiveFactor;
+            return (priceFeed.price() * (botIncentiveBPs + 10_000)) / 10_000;
         }
     }
 
@@ -184,9 +184,7 @@ contract TokenBuyerWithPayer is Ownable, ReentrancyGuard {
     }
 
     function setBotIncentiveBPs(uint16 newBotIncentiveBPs) public onlyOwner {
-        unchecked {
-            botIncentiveFactor = (newBotIncentiveBPs + 10_000) / 10_000;
-        }
+        botIncentiveBPs = newBotIncentiveBPs;
     }
 
     /**
