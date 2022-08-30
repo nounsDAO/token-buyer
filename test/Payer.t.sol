@@ -14,13 +14,12 @@ contract PayerTest is Test {
     TestERC20 paymentToken;
     IOUToken iou;
     address owner = address(42);
-    address buyer = address(1337);
     address user = address(1234);
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
         iou = new IOUToken('IOU Token', 'IOU', 18, owner);
-        payer = new Payer(owner, paymentToken, iou, buyer);
+        payer = new Payer(owner, paymentToken, iou);
 
         vm.startPrank(owner);
         iou.grantRole(iou.MINTER_ROLE(), address(payer));
@@ -34,7 +33,7 @@ contract PayerTest is Test {
         IOUToken iouToken = new IOUToken('IOU Token', 'IOU', differentDecimals, owner);
 
         vm.expectRevert(abi.encodeWithSelector(Payer.DecimalsMismatch.selector, 18, 42));
-        payer = new Payer(owner, pToken, iouToken, address(0));
+        payer = new Payer(owner, pToken, iouToken);
     }
 
     function test_sendOrMint_revertsWhenCalledByNonOwner() public {

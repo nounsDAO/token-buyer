@@ -31,7 +31,6 @@ import { IOUToken } from './IOUToken.sol';
 contract Payer is Ownable {
     using SafeERC20 for IERC20Metadata;
 
-    error FailedSendingETH(bytes data);
     error DecimalsMismatch(uint8 paymentDecimals, uint8 iouDecimals);
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
@@ -45,8 +44,7 @@ contract Payer is Ownable {
     constructor(
         address _owner,
         IERC20Metadata _paymentToken,
-        IOUToken _iouToken,
-        address _buyer
+        IOUToken _iouToken
     ) {
         if (_paymentToken.decimals() != _iouToken.decimals()) {
             revert DecimalsMismatch(_paymentToken.decimals(), _iouToken.decimals());
@@ -54,7 +52,6 @@ contract Payer is Ownable {
 
         paymentToken = _paymentToken;
         iouToken = _iouToken;
-        buyer = _buyer;
         _transferOwnership(_owner);
     }
 
@@ -62,7 +59,7 @@ contract Payer is Ownable {
      * @param account the account to send or mint to.
      * @param amount the amount of tokens `account` should receive, in {paymentToken} decimals.
      */
-    function sendOrMint(address account, uint256 amount) external payable onlyOwner {
+    function sendOrMint(address account, uint256 amount) external onlyOwner {
         uint256 paymentTokenBalance = paymentToken.balanceOf(address(this));
 
         if (amount <= paymentTokenBalance) {
@@ -72,13 +69,6 @@ contract Payer is Ownable {
             iouToken.mint(account, amount - paymentTokenBalance);
         } else {
             iouToken.mint(account, amount);
-        }
-
-        if (msg.value > 0) {
-            (bool sent, bytes memory data) = buyer.call{ value: msg.value }('');
-            if (!sent) {
-                revert FailedSendingETH(data);
-            }
         }
     }
 
@@ -107,9 +97,5 @@ contract Payer is Ownable {
             iouToken.burn(account, amount);
             paymentToken.safeTransfer(account, amount);
         }
-    }
-
-    function setTokenBuyer(address newBuyer) public onlyOwner {
-        buyer = newBuyer;
     }
 }

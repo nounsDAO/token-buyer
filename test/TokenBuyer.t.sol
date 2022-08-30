@@ -34,7 +34,7 @@ contract TokenBuyerTest is Test {
         iou = new IOUToken('IOU Token', 'IOU', 18, owner);
         priceFeed = new TestPriceFeed();
 
-        payer = new Payer(owner, paymentToken, iou, address(0));
+        payer = new Payer(owner, paymentToken, iou);
 
         buyer = new TokenBuyer(
             paymentToken,
@@ -50,9 +50,6 @@ contract TokenBuyerTest is Test {
             admin,
             address(payer)
         );
-
-        vm.prank(owner);
-        payer.setTokenBuyer(address(buyer));
 
         vm.startPrank(owner);
         iou.grantRole(iou.MINTER_ROLE(), address(payer));
