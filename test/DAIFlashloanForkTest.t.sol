@@ -41,7 +41,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
     uint256 constant DAI_BUYER_WANTS = 100_000 ether;
 
-    address constant BIG_DAI_HOLDER = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
+    address constant DAI_WHALE = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
 
     IERC20Metadata dai;
     TokenBuyer buyer;
@@ -199,7 +199,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     }
 
     function fundBotWithDAI(uint256 amount) internal {
-        vm.prank(BIG_DAI_HOLDER);
+        vm.prank(DAI_WHALE);
         dai.transfer(bot, amount);
     }
 
