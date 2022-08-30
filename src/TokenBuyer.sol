@@ -50,6 +50,12 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     /// @notice the ERC20 token that represents this contracts liabilities in `paymentToken`. Assumed to have 18 decimals.
     IOUToken public immutable iouToken;
 
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      STORAGE VARIABLES
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
     /// @notice the contract used to fetch the price of `paymentToken` in ETH.
     IPriceFeed public priceFeed;
 
