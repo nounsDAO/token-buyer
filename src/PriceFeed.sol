@@ -30,16 +30,26 @@ contract PriceFeed is IPriceFeed {
     uint256 constant WAD_DECIMALS = 18;
 
     error StaleOracle(uint256 updatedAt);
+    error InvalidPrice(uint256 priceWAD);
 
     AggregatorV3Interface public immutable chainlink;
     uint8 public immutable decimals;
-    uint256 public immutable staleAfter;
     uint256 public immutable decimalFactor;
+    uint256 public immutable staleAfter;
+    uint256 public immutable priceLowerBound;
+    uint256 public immutable priceUpperBound;
 
-    constructor(AggregatorV3Interface _chainlink, uint256 _staleAfter) {
+    constructor(
+        AggregatorV3Interface _chainlink,
+        uint256 _staleAfter,
+        uint256 _priceLowerBound,
+        uint256 _priceUpperBound
+    ) {
         chainlink = _chainlink;
         decimals = chainlink.decimals();
         staleAfter = _staleAfter;
+        priceLowerBound = _priceLowerBound;
+        priceUpperBound = _priceUpperBound;
 
         uint256 decimalFactorTemp = 1;
         if (decimals < WAD_DECIMALS) {
@@ -60,7 +70,12 @@ contract PriceFeed is IPriceFeed {
             revert StaleOracle(updatedAt);
         }
 
-        return toWAD(chainlinkPrice.toUint256());
+        uint256 priceWAD = toWAD(chainlinkPrice.toUint256());
+
+        if (priceWAD < priceLowerBound || priceWAD > priceUpperBound) {
+            revert InvalidPrice(priceWAD);
+        }
+        return priceWAD;
     }
 
     function toWAD(uint256 chainlinkPrice) internal view returns (uint256) {

@@ -43,6 +43,10 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
     address constant DAI_WHALE = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
 
+    // PriceFeed config
+    uint256 constant PRICE_UPPER_BOUND = 0.01e18; // i.e. 100 tokens buy 1 ETH
+    uint256 constant PRICE_LOWER_BOUND = 0.00001e18; // i.e. 100K tokens buy 1 ETH
+
     IERC20Metadata dai;
     TokenBuyer buyer;
     Payer payer;
@@ -64,7 +68,12 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         vm.warp(BLOCK_TIMESTAMP);
 
         dai = IERC20Metadata(DAI_ADDRESS);
-        priceFeed = new PriceFeed(AggregatorV3Interface(DAI_ETH_CHAINLINK), 10 hours);
+        priceFeed = new PriceFeed(
+            AggregatorV3Interface(DAI_ETH_CHAINLINK),
+            10 hours,
+            PRICE_LOWER_BOUND,
+            PRICE_UPPER_BOUND
+        );
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
         iou = new IOUToken('IOU Token', 'IOU', 18, owner);

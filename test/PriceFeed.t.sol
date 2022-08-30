@@ -2,42 +2,45 @@
 pragma solidity ^0.8.15;
 
 import 'forge-std/Test.sol';
+import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { TestChainlinkAggregator } from './helpers/TestChainlinkAggregator.sol';
 
 contract PriceFeedTest is Test {
     uint256 constant STALE_AFTER = 42 hours;
+    uint256 constant PRICE_UPPER_BOUND = 0.01e18; // i.e. 100 tokens buy 1 ETH
+    uint256 constant PRICE_LOWER_BOUND = 0.00001e18; // i.e. 100K tokens buy 1 ETH
 
     PriceFeed feed;
     TestChainlinkAggregator chainlink;
 
     function setUp() public {
         chainlink = new TestChainlinkAggregator(18);
-        feed = new PriceFeed(chainlink, STALE_AFTER);
+        feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
     }
 
     function test_price_decimalsEqualWAD() public {
         chainlink.setDecimals(18);
-        chainlink.setLatestRound(12345678987654321, block.timestamp);
-        feed = new PriceFeed(chainlink, STALE_AFTER);
+        chainlink.setLatestRound(0.005e18, block.timestamp);
+        feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 12345678987654321);
+        assertEq(feed.price(), 0.005e18);
     }
 
     function test_price_decimalsBelowWAD() public {
         chainlink.setDecimals(16);
-        chainlink.setLatestRound(12345678987654321, block.timestamp);
-        feed = new PriceFeed(chainlink, STALE_AFTER);
+        chainlink.setLatestRound(0.001e16, block.timestamp);
+        feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 1234567898765432100);
+        assertEq(feed.price(), 0.001e18);
     }
 
     function test_price_decimalsAboveWAD() public {
         chainlink.setDecimals(21);
-        chainlink.setLatestRound(12345678987654321, block.timestamp);
-        feed = new PriceFeed(chainlink, STALE_AFTER);
+        chainlink.setLatestRound(0.001e21, block.timestamp);
+        feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 12345678987654);
+        assertEq(feed.price(), 0.001e18);
     }
 
     function test_price_negativePriceReverts() public {
@@ -52,6 +55,22 @@ contract PriceFeedTest is Test {
         chainlink.setLatestRound(1234, staleTime);
 
         vm.expectRevert(abi.encodeWithSelector(PriceFeed.StaleOracle.selector, staleTime));
+        feed.price();
+    }
+
+    function test_price_revertsBelowLowerBound() public {
+        int256 invalidLowPrice = SafeCast.toInt256(PRICE_LOWER_BOUND - 1);
+        chainlink.setLatestRound(invalidLowPrice, block.timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(PriceFeed.InvalidPrice.selector, invalidLowPrice));
+        feed.price();
+    }
+
+    function test_price_revertsAboveUpperBound() public {
+        int256 invalidHighPrice = SafeCast.toInt256(PRICE_UPPER_BOUND + 1);
+        chainlink.setLatestRound(invalidHighPrice, block.timestamp);
+
+        vm.expectRevert(abi.encodeWithSelector(PriceFeed.InvalidPrice.selector, invalidHighPrice));
         feed.price();
     }
 }
