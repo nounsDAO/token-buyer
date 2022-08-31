@@ -310,10 +310,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         bytes memory data
     ) internal {
         // If contract balance is insufficient it reverts
-        (bool sent, ) = to.call{ value: ethAmount }(data);
+        (bool sent, bytes memory returnData) = to.call{ value: ethAmount }(data);
         if (!sent) {
-            // TODO solve error encoding in tests to use add returned data in the error
-            revert FailedSendingETH(new bytes(0));
+            revert FailedSendingETH(returnData);
         }
     }
 }

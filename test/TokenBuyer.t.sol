@@ -12,6 +12,7 @@ import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 contract TokenBuyerTest is Test {
     bytes constant STUB_CALLDATA = 'stub calldata';
     bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
+    bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
 
     TokenBuyer buyer;
     Payer payer;
@@ -237,7 +238,7 @@ contract TokenBuyerTest is Test {
         vm.prank(address(attacker));
         paymentToken.approve(address(buyer), toWAD(4000));
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
         attacker.attack(toWAD(2000));
     }
 
@@ -310,9 +311,7 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
 
-        // TODO expectRevert with this data did not work when the error contained call return data; not encoding the expected data properly
-        // bytes memory errorData = abi.encode(address(attacker), toWAD(2000), '');
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
         attacker.reenterBuyWithCallback(toWAD(2000));
     }
 
@@ -324,7 +323,7 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
         attacker.reenterBuyNoCallback(toWAD(2000));
     }
 
