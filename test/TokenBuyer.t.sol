@@ -574,6 +574,21 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.unpause();
     }
 
+    function test_setPayer_worksForOwner() public {
+        address newPayer = address(112233);
+        assertFalse(newPayer == buyer.payer());
+
+        vm.prank(owner);
+        buyer.setPayer(newPayer);
+
+        assertEq(newPayer, buyer.payer());
+    }
+
+    function test_setPayer_revertsForNonOwner() public {
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.setPayer(address(112233));
+    }
+
     function toWAD(uint256 amount) public pure returns (uint256) {
         return amount * 10**18;
     }

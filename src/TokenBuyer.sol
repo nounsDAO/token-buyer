@@ -295,6 +295,10 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         priceFeed = newPriceFeed;
     }
 
+    function setPayer(address newPayer) external onlyOwner {
+        payer = newPayer;
+    }
+
     function setAdmin(address newAdmin) external onlyOwner {
         admin = newAdmin;
     }
