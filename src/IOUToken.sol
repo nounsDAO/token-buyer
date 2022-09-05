@@ -24,14 +24,14 @@ import { AccessControlEnumerable } from 'openzeppelin-contracts/contracts/access
  * @notice An ERC20 token representing a debt {Payer} owes its payment recipients. {Payer} can mint this token whenever a
  * payment is created with insufficient payment token balance; {Payer} can then burn this token when recipients redeem it for
  * the desired payment token.
- * @dev To work properly with {Payer}, must have the same decimals as the payment token.
+ * @dev To work properly with {Payer}, must have the same decimals as Payer#paymentToken.
  */
 contract IOUToken is ERC20, AccessControlEnumerable {
     bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
     bytes32 public constant MINTER_ROLE = keccak256('MINTER_ROLE');
     bytes32 public constant BURNER_ROLE = keccak256('BURNER_ROLE');
 
-    uint8 public _decimals;
+    uint8 public immutable _decimals;
 
     constructor(
         string memory name_,
@@ -47,12 +47,10 @@ contract IOUToken is ERC20, AccessControlEnumerable {
         _setupRole(ADMIN_ROLE, admin);
     }
 
-    // TODO add permissions
     function mint(address account, uint256 amount) public onlyRole(MINTER_ROLE) {
         _mint(account, amount);
     }
 
-    // TODO add permissions
     function burn(address account, uint256 amount) public onlyRole(BURNER_ROLE) {
         _burn(account, amount);
     }
