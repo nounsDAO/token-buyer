@@ -8,8 +8,9 @@ import { TestERC20 } from './helpers/TestERC20.sol';
 import { IOUToken } from '../src/IOUToken.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
+import { IBuyETHCallback } from '../src/IBuyETHCallback.sol';
 
-contract TokenBuyerTest is Test {
+contract TokenBuyerTest is Test, IBuyETHCallback {
     bytes constant STUB_CALLDATA = 'stub calldata';
     bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
@@ -238,7 +239,12 @@ contract TokenBuyerTest is Test {
         vm.prank(address(attacker));
         paymentToken.approve(address(buyer), toWAD(4000));
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TokenBuyer.FailedSendingETH.selector,
+                abi.encodeWithSelector(ERROR_SELECTOR, 'ReentrancyGuard: reentrant call')
+            )
+        );
         attacker.attack(toWAD(2000));
     }
 
@@ -282,9 +288,13 @@ contract TokenBuyerTest is Test {
         paymentToken.mint(address(this), toWAD(4000));
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
-        assertEq(address(buyer).balance, 0);
+        // 2000 tokens at 0.0005 price = 1 ether
+        // setting the balance to the highest point where it should fail
+        vm.deal(address(buyer), 1 ether - 1 wei);
+        assertEq(address(buyer).balance, 1 ether - 1 wei);
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
+        // EvmError: OutOfFund doesn't result in revert data
+        vm.expectRevert();
         buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
     }
 
@@ -311,7 +321,7 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
+        vm.expectRevert('ReentrancyGuard: reentrant call');
         attacker.reenterBuyWithCallback(toWAD(2000));
     }
 
@@ -323,19 +333,22 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(toWAD(2000));
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, abi.encodeWithSelector(ERROR_SELECTOR, "ReentrancyGuard: reentrant call")));
+        vm.expectRevert('ReentrancyGuard: reentrant call');
         attacker.reenterBuyNoCallback(toWAD(2000));
     }
 
-    fallback() external payable {
-        (address sender, uint256 tokenAmount, bytes memory callData) = abi.decode(msg.data, (address, uint256, bytes));
-        assertEq(sender, address(this));
-        assertEq(callData, STUB_CALLDATA);
+    function buyETHCallback(
+        address caller,
+        uint256 amount,
+        bytes calldata data
+    ) external payable override {
+        assertEq(caller, address(this));
+        assertEq(data, STUB_CALLDATA);
 
         if (overrideTokenAmount) {
-            tokenAmount = tokenAmountOverride;
+            amount = tokenAmountOverride;
         }
-        paymentToken.transfer(address(buyer), tokenAmount);
+        paymentToken.transfer(address(buyer), amount);
     }
 
     function test_happyFlow_payingFullyInPaymentToken() public {

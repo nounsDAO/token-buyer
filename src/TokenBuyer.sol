@@ -25,6 +25,7 @@ import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/Reent
 import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
 import { IOUToken } from './IOUToken.sol';
+import { IBuyETHCallback } from './IBuyETHCallback.sol';
 
 /**
  * @notice Use this contract to exchange ETH for any ERC20 token at oracle prices.
@@ -153,7 +154,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
         uint256 balanceBefore = paymentToken.balanceOf(address(this));
 
-        safeSendETH(to, ethAmountPerTokenAmount(amount), abi.encode(msg.sender, amount, data));
+        IBuyETHCallback(to).buyETHCallback{ value: ethAmountPerTokenAmount(amount) }(msg.sender, amount, data);
 
         uint256 tokensReceived = paymentToken.balanceOf(address(this)) - balanceBefore;
         if (tokensReceived < amount) {

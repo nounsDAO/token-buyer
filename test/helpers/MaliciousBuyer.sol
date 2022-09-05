@@ -2,6 +2,7 @@
 pragma solidity ^0.8.15;
 
 import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+import { IBuyETHCallback } from '../../src/IBuyETHCallback.sol';
 import 'forge-std/console.sol';
 
 interface TokenBuyerLike {
@@ -14,7 +15,7 @@ interface TokenBuyerLike {
     ) external;
 }
 
-contract MaliciousBuyer {
+contract MaliciousBuyer is IBuyETHCallback {
     TokenBuyerLike buyer;
     IERC20 token;
     bool calledTwice;
@@ -47,18 +48,21 @@ contract MaliciousBuyer {
         buyer.buyETH(tokenAmountWAD, address(this), '');
     }
 
-    fallback() external payable {
-        (, uint256 tokenAmount, ) = abi.decode(msg.data, (address, uint256, bytes));
+    function buyETHCallback(
+        address caller,
+        uint256 amount,
+        bytes calldata data
+    ) external payable {
         if (reenterWithCallback) {
             if (!calledTwice) {
                 calledTwice = true;
-                buyer.buyETH(tokenAmount, address(this), '');
+                buyer.buyETH(amount, address(this), '');
             } else {
-                token.transfer(address(buyer), tokenAmount);
+                token.transfer(address(buyer), amount);
             }
         } else {
-            token.approve(address(buyer), tokenAmount);
-            buyer.buyETH(tokenAmount);
+            token.approve(address(buyer), amount);
+            buyer.buyETH(amount);
         }
     }
 }
