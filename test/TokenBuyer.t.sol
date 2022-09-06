@@ -348,7 +348,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         if (overrideTokenAmount) {
             amount = tokenAmountOverride;
         }
-        paymentToken.transfer(address(buyer), amount);
+        paymentToken.transfer(address(payer), amount);
     }
 
     function test_happyFlow_payingFullyInPaymentToken() public {

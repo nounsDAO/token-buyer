@@ -132,10 +132,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      */
 
     /**
-     * @notice Buy ETH from this contract in exchange for the ERC20 this token wants to acquire. The price
+     * @notice Buy ETH from this contract in exchange for the ERC20 {paymentToken} this token wants to acquire. The price
      * is determined using `priceFeed` plus `botIncentiveBPs` basis points.
-     * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible. This function allows reentry because it does
-     * not allow double spending or exceeding the contract's {tokenAmountNeeded()}.
+     * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible.
      * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
      */
     function buyETH(uint256 tokenAmount) external nonReentrant whenNotPaused {
@@ -146,22 +145,29 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         safeSendETH(msg.sender, ethAmountPerTokenAmount(amount), '');
     }
 
+    /**
+     * @notice Buy ETH from this contract in exchange for the ERC20 {paymentToken} this token wants to acquire. The price
+     * is determined using {priceFeed} plus {botIncentiveBPs} basis points.
+     * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible. This function sends ETH to the `to` address
+     * by calling the callback function IBuyETHCallback#buyETHCallback.
+     * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
+     * @param to the address to send ETH to by calling the callback function on it
+     * @param data arbitrary data passed through by the caller, usually used for callback verification
+     */
     function buyETH(
         uint256 tokenAmount,
         address to,
         bytes calldata data
     ) external nonReentrant whenNotPaused {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
-        uint256 balanceBefore = paymentToken.balanceOf(address(this));
+        uint256 balanceBefore = paymentToken.balanceOf(payer);
 
         IBuyETHCallback(to).buyETHCallback{ value: ethAmountPerTokenAmount(amount) }(msg.sender, amount, data);
 
-        uint256 tokensReceived = paymentToken.balanceOf(address(this)) - balanceBefore;
+        uint256 tokensReceived = paymentToken.balanceOf(payer) - balanceBefore;
         if (tokensReceived < amount) {
             revert ReceivedInsufficientTokens(amount, tokensReceived);
         }
-
-        paymentToken.safeTransfer(payer, tokensReceived);
     }
 
     /**
