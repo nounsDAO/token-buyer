@@ -17,6 +17,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
     event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event BaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
 
     TokenBuyer buyer;
     Payer payer;
@@ -493,9 +494,25 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBaselinePaymentTokenAmount(10_001);
     }
 
+    function test_setBaselinePaymentTokenAmount_adminCall_worksGivenValidInput() public {
+        vm.startPrank(owner);
+        buyer.setMinAdminBaselinePaymentTokenAmount(10_000);
+        buyer.setMaxAdminBaselinePaymentTokenAmount(100_000);
+        vm.stopPrank();
+        vm.expectEmit(true, true, true, true);
+        emit BaselinePaymentTokenAmountSet(0, 50_000);
+
+        vm.prank(admin);
+        buyer.setBaselinePaymentTokenAmount(50_000);
+
+        assertEq(50_000, buyer.baselinePaymentTokenAmount());
+    }
+
     function test_setBaselinePaymentTokenAmount_ownerCall_allowsSetGivenInputLessThanMin() public {
         vm.prank(owner);
         buyer.setMinAdminBaselinePaymentTokenAmount(10_000);
+        vm.expectEmit(true, true, true, true);
+        emit BaselinePaymentTokenAmountSet(0, 9999);
 
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(9999);
@@ -506,6 +523,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setBaselinePaymentTokenAmount_ownerCall_allowsSetGivenInputGreaterThanMax() public {
         vm.prank(owner);
         buyer.setMaxAdminBaselinePaymentTokenAmount(10_000);
+        vm.expectEmit(true, true, true, true);
+        emit BaselinePaymentTokenAmountSet(0, 10_001);
 
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(10_001);
@@ -545,6 +564,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         vm.prank(admin);
         buyer.setBotIncentiveBPs(75);
+
+        assertEq(75, buyer.botIncentiveBPs());
     }
 
     function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputLessThanMin() public {
