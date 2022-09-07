@@ -48,6 +48,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     event ETHWithdrawn(address indexed to, uint256 amount);
     event MinAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
     event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
+    event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
@@ -317,10 +319,20 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     }
 
     function setMinAdminBaselinePaymentTokenAmount(uint256 newMinAdminBaselinePaymentTokenAmount) external onlyOwner {
+        emit MinAdminBaselinePaymentTokenAmountSet(
+            minAdminBaselinePaymentTokenAmount,
+            newMinAdminBaselinePaymentTokenAmount
+        );
+
         minAdminBaselinePaymentTokenAmount = newMinAdminBaselinePaymentTokenAmount;
     }
 
     function setMaxAdminBaselinePaymentTokenAmount(uint256 newMaxAdminBaselinePaymentTokenAmount) external onlyOwner {
+        emit MaxAdminBaselinePaymentTokenAmountSet(
+            maxAdminBaselinePaymentTokenAmount,
+            newMaxAdminBaselinePaymentTokenAmount
+        );
+
         maxAdminBaselinePaymentTokenAmount = newMaxAdminBaselinePaymentTokenAmount;
     }
 

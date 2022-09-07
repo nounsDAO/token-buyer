@@ -21,6 +21,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     event ETHWithdrawn(address indexed to, uint256 amount);
     event MinAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
     event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
+    event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
 
     TokenBuyer buyer;
     Payer payer;
@@ -710,6 +712,32 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setMaxAdminBotIncentiveBPs_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
         buyer.setMaxAdminBotIncentiveBPs(142);
+    }
+
+    function test_setMinAdminBaselinePaymentTokenAmount_worksForOwner() public {
+        vm.expectEmit(true, true, true, true);
+        emit MinAdminBaselinePaymentTokenAmountSet(0, 42);
+
+        vm.prank(owner);
+        buyer.setMinAdminBaselinePaymentTokenAmount(42);
+    }
+
+    function test_setMinAdminBaselinePaymentTokenAmount_revertsForNonOwner() public {
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.setMinAdminBaselinePaymentTokenAmount(42);
+    }
+
+    function test_setMaxAdminBaselinePaymentTokenAmount_worksForOwner() public {
+        vm.expectEmit(true, true, true, true);
+        emit MaxAdminBaselinePaymentTokenAmountSet(10_000_000e18, 142);
+
+        vm.prank(owner);
+        buyer.setMaxAdminBaselinePaymentTokenAmount(142);
+    }
+
+    function test_setMaxAdminBaselinePaymentTokenAmount_revertsForNonOwner() public {
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.setMaxAdminBaselinePaymentTokenAmount(42);
     }
 
     // Added this due to a compiler warning
