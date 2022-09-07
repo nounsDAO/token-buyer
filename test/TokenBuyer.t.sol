@@ -44,7 +44,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
             priceFeed,
             baselinePaymentTokenAmount,
             0,
-            toWAD(10_000_000),
+            10_000_000e18,
             botIncentiveBPs,
             0,
             10_000,
@@ -79,50 +79,50 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
     function test_tokenAmountNeeded_baselineAmountOnly() public {
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
 
-        assertEq(buyer.tokenAmountNeeded(), toWAD(100_000));
+        assertEq(buyer.tokenAmountNeeded(), 100_000e18);
     }
 
     function test_tokenAmountNeeded_iouSupplyOnly() public {
         vm.prank(address(payer));
-        iou.mint(address(1), toWAD(42_000));
+        iou.mint(address(1), 42_000e18);
 
-        assertEq(buyer.tokenAmountNeeded(), toWAD(42_000));
+        assertEq(buyer.tokenAmountNeeded(), 42_000e18);
     }
 
     function test_tokenAmountNeeded_paymentTokenBalanceOnly() public {
-        paymentToken.mint(address(buyer), toWAD(42_000));
+        paymentToken.mint(address(buyer), 42_000e18);
 
         assertEq(buyer.tokenAmountNeeded(), 0);
     }
 
     function test_tokenAmountNeeded_baselineAndPaymentTokenBalance() public {
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
-        paymentToken.mint(address(buyer), toWAD(42_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
+        paymentToken.mint(address(buyer), 42_000e18);
 
-        assertEq(buyer.tokenAmountNeeded(), toWAD(58_000));
+        assertEq(buyer.tokenAmountNeeded(), 58_000e18);
     }
 
     function test_tokenAmountNeeded_baselineAndPaymentTokenBalanceAndIOUSupply() public {
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
-        paymentToken.mint(address(buyer), toWAD(42_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
+        paymentToken.mint(address(buyer), 42_000e18);
         vm.prank(address(payer));
-        iou.mint(address(1), toWAD(11_000));
+        iou.mint(address(1), 11_000e18);
 
-        assertEq(buyer.tokenAmountNeeded(), toWAD(69_000));
+        assertEq(buyer.tokenAmountNeeded(), 69_000e18);
     }
 
     function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
         priceFeed.setPrice(0.0005 ether);
 
         (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
 
-        assertEq(tokenAmount, toWAD(100_000));
+        assertEq(tokenAmount, 100_000e18);
         assertEq(ethAmount, 50 ether);
     }
 
@@ -170,13 +170,13 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         // 1 / 2000 = 0.0005
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(bot, toWAD(2000));
+        paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(2000));
-        buyer.buyETH(toWAD(2000));
+        paymentToken.approve(address(buyer), 2000e18);
+        buyer.buyETH(2000e18);
         vm.stopPrank();
 
         assertEq(bot.balance, 1 ether);
@@ -185,59 +185,59 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_buyETH_botCappedToBaselineAmount() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(bot, toWAD(4000));
+        paymentToken.mint(bot, 4000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(4000));
-        buyer.buyETH(toWAD(4000));
+        paymentToken.approve(address(buyer), 4000e18);
+        buyer.buyETH(4000e18);
         vm.stopPrank();
 
         assertEq(bot.balance, 1 ether);
-        assertEq(paymentToken.balanceOf(bot), toWAD(2000));
+        assertEq(paymentToken.balanceOf(bot), 2000e18);
     }
 
     function test_buyETH_revertsWhenContractHasInsufficientETH() public {
         priceFeed.setPrice(0.0005 ether);
-        paymentToken.mint(bot, toWAD(2000));
+        paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
         assertEq(address(buyer).balance, 0);
 
         vm.prank(bot);
-        paymentToken.approve(address(buyer), toWAD(2000));
+        paymentToken.approve(address(buyer), 2000e18);
 
         vm.prank(bot);
         vm.expectRevert(abi.encodeWithSelector(TokenBuyer.FailedSendingETH.selector, new bytes(0)));
-        buyer.buyETH(toWAD(2000));
+        buyer.buyETH(2000e18);
     }
 
     function test_buyETH_revertsWhenTokenApprovalInsufficient() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(bot, toWAD(2000));
+        paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.prank(bot);
-        paymentToken.approve(address(buyer), toWAD(2000) - 1);
+        paymentToken.approve(address(buyer), 2000e18 - 1);
 
         vm.prank(bot);
         vm.expectRevert('ERC20: insufficient allowance');
-        buyer.buyETH(toWAD(2000));
+        buyer.buyETH(2000e18);
     }
 
     function test_buyETH_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
-        paymentToken.mint(address(attacker), toWAD(4000));
+        paymentToken.mint(address(attacker), 4000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(4000));
+        buyer.setBaselinePaymentTokenAmount(4000e18);
 
         vm.prank(address(attacker));
-        paymentToken.approve(address(buyer), toWAD(4000));
+        paymentToken.approve(address(buyer), 4000e18);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -245,7 +245,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
                 abi.encodeWithSelector(ERROR_SELECTOR, 'ReentrancyGuard: reentrant call')
             )
         );
-        attacker.attack(toWAD(2000));
+        attacker.attack(2000e18);
     }
 
     function test_buyETHWithCallback_revertsWhenPaused() public {
@@ -259,12 +259,12 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), toWAD(2000));
+        paymentToken.mint(address(this), 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
         uint256 balanceBefore = address(this).balance;
 
-        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
 
         assertEq(address(this).balance - balanceBefore, 1 ether);
     }
@@ -272,22 +272,22 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_buyETHWithCallback_botCappedToBaselineAmount() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), toWAD(4000));
+        paymentToken.mint(address(this), 4000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
         uint256 balanceBefore = address(this).balance;
 
-        buyer.buyETH(toWAD(4000), address(this), STUB_CALLDATA);
+        buyer.buyETH(4000e18, address(this), STUB_CALLDATA);
 
         assertEq(address(this).balance - balanceBefore, 1 ether);
-        assertEq(paymentToken.balanceOf(address(this)), toWAD(2000));
+        assertEq(paymentToken.balanceOf(address(this)), 2000e18);
     }
 
     function test_buyETHWithCallback_revertsWhenContractHasInsufficientETH() public {
         priceFeed.setPrice(0.0005 ether);
-        paymentToken.mint(address(this), toWAD(4000));
+        paymentToken.mint(address(this), 4000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
         // 2000 tokens at 0.0005 price = 1 ether
         // setting the balance to the highest point where it should fail
         vm.deal(address(buyer), 1 ether - 1 wei);
@@ -295,46 +295,46 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // EvmError: OutOfFund doesn't result in revert data
         vm.expectRevert();
-        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_revertsWhenTokenPaymentInsufficient() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), toWAD(2000));
+        paymentToken.mint(address(this), 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
-        tokenAmountOverride = toWAD(2000) - 1;
+        buyer.setBaselinePaymentTokenAmount(2000e18);
+        tokenAmountOverride = 2000e18 - 1;
         overrideTokenAmount = true;
 
         vm.expectRevert(
-            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, toWAD(2000), tokenAmountOverride)
+            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, tokenAmountOverride)
         );
-        buyer.buyETH(toWAD(2000), address(this), STUB_CALLDATA);
+        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
-        paymentToken.mint(address(attacker), toWAD(2000));
+        paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.expectRevert('ReentrancyGuard: reentrant call');
-        attacker.reenterBuyWithCallback(toWAD(2000));
+        attacker.reenterBuyWithCallback(2000e18);
     }
 
     function test_buyETHWithCallback_maliciousBuyerCantReenterOtherBuyETHFunction() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 10 ether);
-        paymentToken.mint(address(attacker), toWAD(2000));
+        paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(2000));
+        buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.expectRevert('ReentrancyGuard: reentrant call');
-        attacker.reenterBuyNoCallback(toWAD(2000));
+        attacker.reenterBuyNoCallback(2000e18);
     }
 
     function buyETHCallback(
@@ -358,37 +358,37 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBotIncentiveBPs(100);
         // set buffer (100K)
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
 
         // fund bot and buyer
-        paymentToken.mint(bot, toWAD(100_000));
+        paymentToken.mint(bot, 100_000e18);
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer (100K)
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(100_000));
-        buyer.buyETH(toWAD(100_000));
+        paymentToken.approve(address(buyer), 100_000e18);
+        buyer.buyETH(100_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether);
 
         // send or mint (42K)
         vm.prank(owner);
-        payer.sendOrMint(user, toWAD(42_000));
+        payer.sendOrMint(user, 42_000e18);
 
         // user gets sent that amount right away
         assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), toWAD(42_000));
+        assertEq(paymentToken.balanceOf(user), 42_000e18);
 
         // fund bot and buyer again
-        paymentToken.mint(bot, toWAD(42_000));
+        paymentToken.mint(bot, 42_000e18);
         // 424.2
         vm.deal(address(buyer), 4242 * 10**17);
 
         // bots can top off what's missing (bots buy 42K)
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(42_000));
-        buyer.buyETH(toWAD(42_000));
+        paymentToken.approve(address(buyer), 42_000e18);
+        buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 4242 * 10**17);
@@ -401,35 +401,35 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBotIncentiveBPs(100);
         // set buffer (100K)
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(toWAD(100_000));
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
 
         // fund bot and buyer
-        paymentToken.mint(bot, toWAD(100_000));
+        paymentToken.mint(bot, 100_000e18);
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer (100K)
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(100_000));
-        buyer.buyETH(toWAD(100_000));
+        paymentToken.approve(address(buyer), 100_000e18);
+        buyer.buyETH(100_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether);
 
         // send or mint (142K)
         vm.prank(owner);
-        payer.sendOrMint(user, toWAD(142_000));
-        assertEq(iou.balanceOf(user), toWAD(42_000));
-        assertEq(paymentToken.balanceOf(user), toWAD(100_000));
+        payer.sendOrMint(user, 142_000e18);
+        assertEq(iou.balanceOf(user), 42_000e18);
+        assertEq(paymentToken.balanceOf(user), 100_000e18);
 
         // fund bot and buyer again
-        paymentToken.mint(bot, toWAD(42_000));
+        paymentToken.mint(bot, 42_000e18);
         // 424.2
         vm.deal(address(buyer), 4242 * 10**17);
 
         // bots can top off what's missing (bots buy 42K)
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(42_000));
-        buyer.buyETH(toWAD(42_000));
+        paymentToken.approve(address(buyer), 42_000e18);
+        buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 4242 * 10**17);
@@ -437,15 +437,15 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         // anyone can redeem user's remaining balance(42K)
         payer.redeem(user);
         assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), toWAD(142_000));
+        assertEq(paymentToken.balanceOf(user), 142_000e18);
 
         // bots can top off what's missing (bots buy 100K)
         // fund bot and buyer again
-        paymentToken.mint(bot, toWAD(100_000));
+        paymentToken.mint(bot, 100_000e18);
         vm.deal(address(buyer), 1010 ether);
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), toWAD(100_000));
-        buyer.buyETH(toWAD(100_000));
+        paymentToken.approve(address(buyer), 100_000e18);
+        buyer.buyETH(100_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 4242 * 10**17 + 1010 ether);
@@ -587,10 +587,6 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setPayer_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
         buyer.setPayer(address(112233));
-    }
-
-    function toWAD(uint256 amount) public pure returns (uint256) {
-        return amount * 10**18;
     }
 
     // Added this due to a compiler warning
