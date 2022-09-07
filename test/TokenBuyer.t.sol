@@ -18,6 +18,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
     event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
     event BaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
+    event ETHWithdrawn(address indexed to, uint256 amount);
 
     TokenBuyer buyer;
     Payer payer;
@@ -652,6 +653,24 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setPayer_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
         buyer.setPayer(address(112233));
+    }
+
+    function test_withdrawETH_worksForOwner() public {
+        vm.deal(address(buyer), 1111 ether);
+        vm.expectEmit(true, true, true, true);
+        emit ETHWithdrawn(owner, 1111 ether);
+
+        vm.prank(owner);
+        buyer.withdrawETH();
+
+        assertEq(1111 ether, owner.balance);
+    }
+
+    function test_withdrawETH_revertsForNonOwner() public {
+        vm.deal(address(buyer), 1111 ether);
+
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.withdrawETH();
     }
 
     // Added this due to a compiler warning
