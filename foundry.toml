@@ -6,3 +6,11 @@ solc_version = '0.8.15'
 optimizer_runs = 10000
 verbosity = 3
 block_timestamp = 1661305556
+
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC}"
+rinkeby = "${RINKEBY_RPC}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
+rinkeby = { key = "${ETHERSCAN_API_KEY}" }
