@@ -666,10 +666,21 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         assertEq(1111 ether, owner.balance);
     }
 
+    function test_withdrawETH_worksForAdmin() public {
+        vm.deal(address(buyer), 1111 ether);
+        vm.expectEmit(true, true, true, true);
+        emit ETHWithdrawn(owner, 1111 ether);
+
+        vm.prank(admin);
+        buyer.withdrawETH();
+
+        assertEq(1111 ether, owner.balance);
+    }
+
     function test_withdrawETH_revertsForNonOwner() public {
         vm.deal(address(buyer), 1111 ether);
 
-        vm.expectRevert(OWNABLE_ERROR_STRING);
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.OnlyAdminOrOwner.selector));
         buyer.withdrawETH();
     }
 

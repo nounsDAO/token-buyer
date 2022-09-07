@@ -284,13 +284,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         _unpause();
     }
 
-    /**
-     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-      OWNER TRANSACTIONS
-     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-     */
-
-    function withdrawETH() external onlyOwner {
+    function withdrawETH() external onlyAdminOrOwner {
         uint256 amount = address(this).balance;
         address to = owner();
 
@@ -301,6 +295,12 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
         emit ETHWithdrawn(to, amount);
     }
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      OWNER TRANSACTIONS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
 
     function setMinAdminBotIncentiveBPs(uint16 newMinAdminBotIncentiveBPs) external onlyOwner {
         minAdminBotIncentiveBPs = newMinAdminBotIncentiveBPs;
