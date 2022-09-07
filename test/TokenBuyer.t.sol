@@ -20,6 +20,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     event BaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event ETHWithdrawn(address indexed to, uint256 amount);
     event MinAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
 
     TokenBuyer buyer;
     Payer payer;
@@ -696,6 +697,19 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setMinAdminBotIncentiveBPs_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
         buyer.setMinAdminBotIncentiveBPs(42);
+    }
+
+    function test_setMaxAdminBotIncentiveBPs_worksForOwner() public {
+        vm.expectEmit(true, true, true, true);
+        emit MaxAdminBotIncentiveBPsSet(10_000, 142);
+
+        vm.prank(owner);
+        buyer.setMaxAdminBotIncentiveBPs(142);
+    }
+
+    function test_setMaxAdminBotIncentiveBPs_revertsForNonOwner() public {
+        vm.expectRevert(OWNABLE_ERROR_STRING);
+        buyer.setMaxAdminBotIncentiveBPs(142);
     }
 
     // Added this due to a compiler warning
