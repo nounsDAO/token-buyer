@@ -10,6 +10,8 @@ import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract PayerTest is Test {
+    event Redeemed(address indexed account, uint256 amount);
+
     Payer payer;
     TestERC20 paymentToken;
     IOUToken iou;
@@ -83,6 +85,8 @@ contract PayerTest is Test {
         vm.prank(address(payer));
         iou.mint(user, amount);
         paymentToken.mint(address(payer), amount);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(user, amount);
 
         payer.redeem(user);
 
@@ -96,6 +100,8 @@ contract PayerTest is Test {
         vm.prank(address(payer));
         iou.mint(user, amount);
         paymentToken.mint(address(payer), amount - 1);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(user, amount - 1);
 
         payer.redeem(user);
 
@@ -130,6 +136,8 @@ contract PayerTest is Test {
         vm.prank(address(payer));
         iou.mint(user, amount);
         paymentToken.mint(address(payer), amount);
+        vm.expectEmit(true, true, true, true);
+        emit Redeemed(user, amount);
 
         payer.redeem(user, amount);
         assertEq(iou.balanceOf(user), 0);

@@ -33,6 +33,8 @@ contract Payer is Ownable {
 
     error DecimalsMismatch(uint8 paymentDecimals, uint8 iouDecimals);
 
+    event Redeemed(address indexed account, uint256 amount);
+
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
 
@@ -96,6 +98,8 @@ contract Payer is Ownable {
         if (amount > 0) {
             iouToken.burn(account, amount);
             paymentToken.safeTransfer(account, amount);
+
+            emit Redeemed(account, amount);
         }
     }
 }
