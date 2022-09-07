@@ -15,6 +15,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
 
+    event SoldETH(uint256 ethOut, uint256 tokenIn);
+
     TokenBuyer buyer;
     Payer payer;
     TestERC20 paymentToken;
@@ -174,6 +176,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
 
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1 ether, 2000e18);
+
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 2000e18);
         buyer.buyETH(2000e18);
@@ -188,6 +193,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         paymentToken.mint(bot, 4000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1 ether, 2000e18);
 
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 4000e18);
@@ -264,6 +272,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBaselinePaymentTokenAmount(2000e18);
         uint256 balanceBefore = address(this).balance;
 
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1 ether, 2000e18);
+
         buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
 
         assertEq(address(this).balance - balanceBefore, 1 ether);
@@ -276,6 +287,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
         uint256 balanceBefore = address(this).balance;
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1 ether, 2000e18);
 
         buyer.buyETH(4000e18, address(this), STUB_CALLDATA);
 
@@ -365,6 +379,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer (100K)
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
@@ -382,16 +398,17 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // fund bot and buyer again
         paymentToken.mint(bot, 42_000e18);
-        // 424.2
-        vm.deal(address(buyer), 4242 * 10**17);
+        vm.deal(address(buyer), 424.2 ether);
 
         // bots can top off what's missing (bots buy 42K)
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(424.2 ether, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
-        assertEq(bot.balance, 1010 ether + 4242 * 10**17);
+        assertEq(bot.balance, 1010 ether + 424.2 ether);
     }
 
     function test_happyFlow_payingOverTheBuffer() public {
@@ -408,6 +425,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer (100K)
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
@@ -427,6 +446,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.deal(address(buyer), 4242 * 10**17);
 
         // bots can top off what's missing (bots buy 42K)
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(424.2 ether, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
@@ -443,12 +464,14 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         // fund bot and buyer again
         paymentToken.mint(bot, 100_000e18);
         vm.deal(address(buyer), 1010 ether);
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
-        assertEq(bot.balance, 1010 ether + 4242 * 10**17 + 1010 ether);
+        assertEq(bot.balance, 1010 ether + 424.2 ether + 1010 ether);
     }
 
     function test_setBaselinePaymentTokenAmount_adminCall_revertsGivenInputLessThanMin() public {

@@ -42,6 +42,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     error InvalidBotIncentiveBPs();
     error InvalidBaselinePaymentTokenAmount();
 
+    event SoldETH(uint256 ethOut, uint256 tokenIn);
+
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
 
@@ -142,7 +144,10 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
         paymentToken.safeTransferFrom(msg.sender, payer, amount);
 
-        safeSendETH(msg.sender, ethAmountPerTokenAmount(amount), '');
+        uint256 ethAmount = ethAmountPerTokenAmount(amount);
+        safeSendETH(msg.sender, ethAmount, '');
+
+        emit SoldETH(ethAmount, amount);
     }
 
     /**
@@ -162,13 +167,16 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
         address _payer = payer;
         uint256 balanceBefore = paymentToken.balanceOf(_payer);
+        uint256 ethAmount = ethAmountPerTokenAmount(amount);
 
-        IBuyETHCallback(to).buyETHCallback{ value: ethAmountPerTokenAmount(amount) }(msg.sender, amount, data);
+        IBuyETHCallback(to).buyETHCallback{ value: ethAmount }(msg.sender, amount, data);
 
         uint256 tokensReceived = paymentToken.balanceOf(_payer) - balanceBefore;
         if (tokensReceived < amount) {
             revert ReceivedInsufficientTokens(amount, tokensReceived);
         }
+
+        emit SoldETH(ethAmount, amount);
     }
 
     /**
