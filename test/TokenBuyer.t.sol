@@ -23,6 +23,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
     event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
+    event PriceFeedSet(address oldFeed, address newFeed);
+    event PayerSet(address oldPayer, address newPayer);
+    event AdminSet(address oldAdmin, address newAdmin);
 
     TokenBuyer buyer;
     Payer payer;
@@ -77,8 +80,12 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
     function test_setPriceFeed_worksForOwner() public {
         TestPriceFeed newFeed = new TestPriceFeed();
-
         assertTrue(address(newFeed) != address(buyer.priceFeed()));
+        vm.expectEmit(true, true, true, true);
+        emit PriceFeedSet(address(buyer.priceFeed()), address(newFeed));
+
+        vm.prank(owner);
+        buyer.setMaxAdminBotIncentiveBPs(142);
 
         vm.prank(owner);
         buyer.setPriceFeed(newFeed);
@@ -600,6 +607,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setAdmin_worksForOwner() public {
         address newAdmin = address(112233);
         assertFalse(newAdmin == buyer.admin());
+        vm.expectEmit(true, true, true, true);
+        emit AdminSet(buyer.admin(), newAdmin);
 
         vm.prank(owner);
         buyer.setAdmin(newAdmin);
@@ -647,6 +656,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setPayer_worksForOwner() public {
         address newPayer = address(112233);
         assertFalse(newPayer == buyer.payer());
+        vm.expectEmit(true, true, true, true);
+        emit PayerSet(buyer.payer(), newPayer);
 
         vm.prank(owner);
         buyer.setPayer(newPayer);

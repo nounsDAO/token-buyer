@@ -50,6 +50,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
     event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
+    event PriceFeedSet(address oldFeed, address newFeed);
+    event PayerSet(address oldPayer, address newPayer);
+    event AdminSet(address oldAdmin, address newAdmin);
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
@@ -337,14 +340,20 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     }
 
     function setPriceFeed(IPriceFeed newPriceFeed) external onlyOwner {
+        emit PriceFeedSet(address(priceFeed), address(newPriceFeed));
+
         priceFeed = newPriceFeed;
     }
 
     function setPayer(address newPayer) external onlyOwner {
+        emit PayerSet(payer, newPayer);
+
         payer = newPayer;
     }
 
     function setAdmin(address newAdmin) external onlyOwner {
+        emit AdminSet(admin, newAdmin);
+
         admin = newAdmin;
     }
 
