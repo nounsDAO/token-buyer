@@ -15,7 +15,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
 
-    event SoldETH(uint256 ethOut, uint256 tokenIn);
+    event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
 
     TokenBuyer buyer;
     Payer payer;
@@ -177,7 +177,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1 ether, 2000e18);
+        emit SoldETH(bot, 1 ether, 2000e18);
 
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 2000e18);
@@ -195,7 +195,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBaselinePaymentTokenAmount(2000e18);
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1 ether, 2000e18);
+        emit SoldETH(bot, 1 ether, 2000e18);
 
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 4000e18);
@@ -273,7 +273,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         uint256 balanceBefore = address(this).balance;
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1 ether, 2000e18);
+        emit SoldETH(address(this), 1 ether, 2000e18);
 
         buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
 
@@ -289,7 +289,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         uint256 balanceBefore = address(this).balance;
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1 ether, 2000e18);
+        emit SoldETH(address(this), 1 ether, 2000e18);
 
         buyer.buyETH(4000e18, address(this), STUB_CALLDATA);
 
@@ -380,7 +380,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // bots buy buffer (100K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
@@ -402,7 +402,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // bots can top off what's missing (bots buy 42K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(424.2 ether, 42_000e18);
+        emit SoldETH(bot, 424.2 ether, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
@@ -426,7 +426,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // bots buy buffer (100K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
@@ -447,7 +447,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // bots can top off what's missing (bots buy 42K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(424.2 ether, 42_000e18);
+        emit SoldETH(bot, 424.2 ether, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
@@ -465,7 +465,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         paymentToken.mint(bot, 100_000e18);
         vm.deal(address(buyer), 1010 ether);
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 100_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 100_000e18);
         buyer.buyETH(100_000e18);
