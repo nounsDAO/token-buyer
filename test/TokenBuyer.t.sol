@@ -16,6 +16,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
 
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
+    event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
 
     TokenBuyer buyer;
     Payer payer;
@@ -530,9 +531,27 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.setBotIncentiveBPs(101);
     }
 
+    function test_setBotIncentiveBPs_adminCall_worksGivenValidInput() public {
+        vm.prank(owner);
+        buyer.setBotIncentiveBPs(74);
+
+        vm.startPrank(owner);
+        buyer.setMinAdminBotIncentiveBPs(50);
+        buyer.setMaxAdminBotIncentiveBPs(100);
+        vm.stopPrank();
+
+        vm.expectEmit(true, true, true, true);
+        emit BotIncentiveBPsSet(74, 75);
+
+        vm.prank(admin);
+        buyer.setBotIncentiveBPs(75);
+    }
+
     function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputLessThanMin() public {
         vm.prank(owner);
         buyer.setMinAdminBotIncentiveBPs(50);
+        vm.expectEmit(true, true, true, true);
+        emit BotIncentiveBPsSet(0, 49);
 
         vm.prank(owner);
         buyer.setBotIncentiveBPs(49);
@@ -543,6 +562,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputGreaterThanMax() public {
         vm.prank(owner);
         buyer.setMaxAdminBotIncentiveBPs(100);
+        vm.expectEmit(true, true, true, true);
+        emit BotIncentiveBPsSet(0, 101);
 
         vm.prank(owner);
         buyer.setBotIncentiveBPs(101);

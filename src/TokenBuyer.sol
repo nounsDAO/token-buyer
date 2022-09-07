@@ -43,6 +43,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     error InvalidBaselinePaymentTokenAmount();
 
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
+    event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
@@ -250,6 +251,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         ) {
             revert InvalidBotIncentiveBPs();
         }
+
+        emit BotIncentiveBPsSet(botIncentiveBPs, newBotIncentiveBPs);
 
         botIncentiveBPs = newBotIncentiveBPs;
     }
