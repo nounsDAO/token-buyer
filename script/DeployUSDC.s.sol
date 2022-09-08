@@ -17,7 +17,7 @@ contract DeployUSDCScript is Script {
 
     // USDC
     address constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    uint8 constant MAINNET_DECIMALS = 6;
+    uint8 constant MAINNET_USDC_DECIMALS = 6;
 
     // PriceFeed config
     address constant MAINNET_USDC_ETH_CHAINLINK = 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4;
@@ -36,7 +36,7 @@ contract DeployUSDCScript is Script {
         address owner = MAINNET_NOUNS_EXECUTOR;
         address admin = TECHPOD_MULTISIG;
         IERC20Metadata usdc = IERC20Metadata(MAINNET_USDC);
-        uint8 decimals = MAINNET_DECIMALS;
+        uint8 decimals = MAINNET_USDC_DECIMALS;
 
         if (block.chainid != 1) {
             usdc = new TestERC20('USD Coin', 'USDC');
