@@ -45,9 +45,14 @@ contract DeployScript is Script {
             decimals = 18;
         }
 
-        IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', decimals, owner);
+        IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', decimals, msg.sender);
 
         Payer payer = new Payer(owner, usdc, iou);
+
+        iou.grantRole(iou.MINTER_ROLE(), address(payer));
+        iou.grantRole(iou.BURNER_ROLE(), address(payer));
+        iou.grantRole(iou.ADMIN_ROLE(), owner);
+        iou.revokeRole(iou.ADMIN_ROLE(), msg.sender);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(block.chainid == 1 ? MAINNET_USDC_ETH_CHAINLINK : RINKEBY_USDC_ETH_CHAINLINK),
