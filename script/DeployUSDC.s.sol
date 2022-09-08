@@ -10,7 +10,7 @@ import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { TestERC20 } from '../test/helpers/TestERC20.sol';
 
-contract DeployScript is Script {
+contract DeployUSDCScript is Script {
     // Nouns
     address constant MAINNET_NOUNS_EXECUTOR = 0x0BC3807Ec262cB779b38D65b38158acC3bfedE10;
     address constant TECHPOD_MULTISIG = 0x79095391743e0f017A16c388De6a6a3f175a5cD5;
