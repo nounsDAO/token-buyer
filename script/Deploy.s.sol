@@ -31,9 +31,6 @@ contract DeployScript is Script {
     uint256 constant USD_POSITION_IN_USD = 1_000_000;
 
     function run() public {
-        // uint256 deployerPrivateKey = vm.envUint('PRIVATE_KEY');
-        // vm.startBroadcast(deployerPrivateKey);
-
         vm.startBroadcast();
 
         address owner = MAINNET_NOUNS_EXECUTOR;
