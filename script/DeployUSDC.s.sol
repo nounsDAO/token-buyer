@@ -29,7 +29,9 @@ contract DeployUSDCScript is Script {
 
     // Buyer config
     uint256 constant USD_POSITION_IN_USD = 1_000_000;
+}
 
+contract DeployUSDCMainnet is DeployUSDCScript {
     function run() public {
         vm.startBroadcast();
 
@@ -37,13 +39,6 @@ contract DeployUSDCScript is Script {
         address admin = TECHPOD_MULTISIG;
         IERC20Metadata usdc = IERC20Metadata(MAINNET_USDC);
         uint8 decimals = MAINNET_USDC_DECIMALS;
-
-        if (block.chainid != 1) {
-            usdc = new TestERC20('USD Coin', 'USDC');
-            owner = msg.sender;
-            admin = owner;
-            decimals = 18;
-        }
 
         IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', decimals, msg.sender);
 
@@ -55,7 +50,7 @@ contract DeployUSDCScript is Script {
         iou.revokeRole(iou.ADMIN_ROLE(), msg.sender);
 
         PriceFeed priceFeed = new PriceFeed(
-            AggregatorV3Interface(block.chainid == 1 ? MAINNET_USDC_ETH_CHAINLINK : RINKEBY_USDC_ETH_CHAINLINK),
+            AggregatorV3Interface(MAINNET_USDC_ETH_CHAINLINK),
             USDC_ETH_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
@@ -68,6 +63,49 @@ contract DeployUSDCScript is Script {
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**decimals, // maxAdminBaselinePaymentTokenAmount
+            0, // botIncentiveBPs
+            0, // minAdminBotIncentiveBPs
+            150, // maxAdminBotIncentiveBPs
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.stopBroadcast();
+    }
+}
+
+contract DeployUSDCRinkeby is DeployUSDCScript {
+    uint8 constant DECIMALS = 18;
+
+    function run() public {
+        vm.startBroadcast();
+
+        address owner = msg.sender;
+        address admin = owner;
+        IERC20Metadata usdc = new TestERC20('USD Coin', 'USDC');
+
+        IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', DECIMALS, msg.sender);
+
+        Payer payer = new Payer(owner, usdc, iou);
+
+        iou.grantRole(iou.MINTER_ROLE(), address(payer));
+        iou.grantRole(iou.BURNER_ROLE(), address(payer));
+
+        PriceFeed priceFeed = new PriceFeed(
+            AggregatorV3Interface(RINKEBY_USDC_ETH_CHAINLINK),
+            USDC_ETH_CHAINLINK_HEARTBEAT,
+            PRICE_LOWER_BOUND,
+            PRICE_UPPER_BOUND
+        );
+
+        new TokenBuyer(
+            usdc,
+            iou,
+            priceFeed,
+            USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
+            0, // minAdminBaselinePaymentTokenAmount
+            2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
             0, // botIncentiveBPs
             0, // minAdminBotIncentiveBPs
             150, // maxAdminBotIncentiveBPs

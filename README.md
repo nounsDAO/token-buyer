@@ -21,5 +21,5 @@ forge test
 ## Deploy to Rinkeby
 
 ```sh
-forge script script/DeployUSDC.s.sol --broadcast --verify -vvvvv --chain-id 4 --rpc-url <rinkeby RPC URL here> --keystores <path to keystore file/folder> --sender <the deployer account address>
+forge script script/DeployUSDC.s.sol:DeployUSDCRinkeby --broadcast --verify -vvvvv --chain-id 4 --rpc-url <rinkeby RPC URL here> --keystores <path to keystore file/folder> --sender <the deployer account address>
 ```
