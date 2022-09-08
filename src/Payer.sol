@@ -41,8 +41,6 @@ contract Payer is Ownable {
     /// @notice the ERC20 token that represents this contracts liabilities in `paymentToken`. Assumed to have 18 decimals.
     IOUToken public immutable iouToken;
 
-    address public buyer;
-
     constructor(
         address _owner,
         IERC20Metadata _paymentToken,

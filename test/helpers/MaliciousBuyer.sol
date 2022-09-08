@@ -49,9 +49,9 @@ contract MaliciousBuyer is IBuyETHCallback {
     }
 
     function buyETHCallback(
-        address caller,
+        address,
         uint256 amount,
-        bytes calldata data
+        bytes calldata
     ) external payable {
         if (reenterWithCallback) {
             if (!calledTwice) {
