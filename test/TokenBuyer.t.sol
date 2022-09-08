@@ -108,7 +108,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     }
 
     function test_tokenAmountNeeded_paymentTokenBalanceOnly() public {
-        paymentToken.mint(address(buyer), 42_000e18);
+        paymentToken.mint(address(payer), 42_000e18);
 
         assertEq(buyer.tokenAmountNeeded(), 0);
     }
@@ -116,7 +116,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_tokenAmountNeeded_baselineAndPaymentTokenBalance() public {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
-        paymentToken.mint(address(buyer), 42_000e18);
+        paymentToken.mint(address(payer), 42_000e18);
 
         assertEq(buyer.tokenAmountNeeded(), 58_000e18);
     }
@@ -124,7 +124,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     function test_tokenAmountNeeded_baselineAndPaymentTokenBalanceAndIOUSupply() public {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
-        paymentToken.mint(address(buyer), 42_000e18);
+        paymentToken.mint(address(payer), 42_000e18);
         vm.prank(address(payer));
         iou.mint(address(1), 11_000e18);
 

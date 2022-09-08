@@ -225,7 +225,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in payment token decimals.
      */
     function tokenAmountNeeded() public view returns (uint256) {
-        uint256 _paymentTokenBalance = paymentToken.balanceOf(address(this));
+        uint256 _paymentTokenBalance = paymentToken.balanceOf(payer);
         uint256 iouSupply = iouToken.totalSupply();
         unchecked {
             if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
