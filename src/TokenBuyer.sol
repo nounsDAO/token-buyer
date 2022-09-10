@@ -147,8 +147,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     function buyETH(uint256 tokenAmount) external nonReentrant whenNotPaused {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
 
-        paymentToken.safeTransferFrom(msg.sender, address(payer), amount);
-        payer.payBackDebt(amount);
+        IPayer _payer = payer;
+        paymentToken.safeTransferFrom(msg.sender, address(_payer), amount);
+        _payer.payBackDebt(amount);
 
         uint256 ethAmount = ethAmountPerTokenAmount(amount);
         safeSendETH(msg.sender, ethAmount, '');
