@@ -224,12 +224,12 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     function tokenAmountNeeded() public view returns (uint256) {
         IPayer _payer = payer;
         uint256 _paymentTokenBalance = paymentToken.balanceOf(address(_payer));
-        uint256 iouSupply = _payer.totalDebt();
+        uint256 totalDebt = _payer.totalDebt();
         unchecked {
-            if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
+            if (_paymentTokenBalance > baselinePaymentTokenAmount + totalDebt) {
                 return 0;
             }
-            return baselinePaymentTokenAmount + iouSupply - _paymentTokenBalance;
+            return baselinePaymentTokenAmount + totalDebt - _paymentTokenBalance;
         }
     }
 
