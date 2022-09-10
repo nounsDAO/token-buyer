@@ -172,17 +172,17 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         bytes calldata data
     ) external nonReentrant whenNotPaused {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
-        address _payer = address(payer);
-        uint256 balanceBefore = paymentToken.balanceOf(_payer);
+        IPayer _payer = payer;
+        uint256 balanceBefore = paymentToken.balanceOf(address(_payer));
         uint256 ethAmount = ethAmountPerTokenAmount(amount);
 
         IBuyETHCallback(to).buyETHCallback{ value: ethAmount }(msg.sender, amount, data);
 
-        uint256 tokensReceived = paymentToken.balanceOf(_payer) - balanceBefore;
+        uint256 tokensReceived = paymentToken.balanceOf(address(_payer)) - balanceBefore;
         if (tokensReceived < amount) {
             revert ReceivedInsufficientTokens(amount, tokensReceived);
         }
-        payer.payBackDebt(amount);
+        _payer.payBackDebt(amount);
 
         emit SoldETH(to, ethAmount, amount);
     }
