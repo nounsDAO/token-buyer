@@ -4,7 +4,6 @@ pragma solidity ^0.8.15;
 import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { Payer } from '../src/Payer.sol';
-import { IOUToken } from '../src/IOUToken.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { IWETH } from './helpers/IWETH.sol';
@@ -50,7 +49,6 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     IERC20Metadata dai;
     TokenBuyer buyer;
     Payer payer;
-    IOUToken iou;
     PriceFeed priceFeed;
     uint256 baselinePaymentTokenAmount;
     uint16 botIncentiveBPs;
@@ -76,13 +74,11 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         );
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
-        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
-        payer = new Payer(owner, dai, iou);
+        payer = new Payer(owner, dai);
 
         botIncentiveBPs = 50;
         buyer = new TokenBuyer(
             dai,
-            iou,
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -94,14 +90,9 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
             admin,
             address(payer)
         );
-
-        vm.startPrank(owner);
-        iou.grantRole(iou.MINTER_ROLE(), address(payer));
-        iou.grantRole(iou.BURNER_ROLE(), address(payer));
-        vm.stopPrank();
     }
 
-    function test_fullProposalFlow_partialIOUUsage() public {
+    function test_fullProposalFlow_partialDebtUsage() public {
         uint256 baselineDAI = DAI_BUYER_WANTS;
         uint256 proposalAmount = baselineDAI * 3;
 
@@ -113,19 +104,16 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
 
         vm.prank(owner);
-        payer.sendOrMint(user, proposalAmount);
+        payer.sendOrRegisterDebt(user, proposalAmount);
 
         assertEq(dai.balanceOf(user), baselineDAI);
-        assertEq(iou.balanceOf(user), baselineDAI * 2);
+        assertEq(payer.debtOf(user), baselineDAI * 2);
 
         fundBotWithDAI(buyer.tokenAmountNeeded());
         sellDAIToTokenBuyer(bot, buyer.tokenAmountNeeded());
 
-        vm.prank(anyone);
-        payer.redeem(user);
-
         assertEq(dai.balanceOf(user), proposalAmount);
-        assertEq(iou.balanceOf(user), 0);
+        assertEq(payer.debtOf(user), 0);
     }
 
     function test_botUsingUniswapV3_makesGrossMargin() public {

@@ -5,7 +5,6 @@ import 'forge-std/Script.sol';
 import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { Payer } from '../src/Payer.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
-import { IOUToken } from '../src/IOUToken.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { TestERC20 } from '../test/helpers/TestERC20.sol';
@@ -40,14 +39,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         IERC20Metadata usdc = IERC20Metadata(MAINNET_USDC);
         uint8 decimals = MAINNET_USDC_DECIMALS;
 
-        IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', decimals, msg.sender);
-
-        Payer payer = new Payer(owner, usdc, iou);
-
-        iou.grantRole(iou.MINTER_ROLE(), address(payer));
-        iou.grantRole(iou.BURNER_ROLE(), address(payer));
-        iou.grantRole(iou.ADMIN_ROLE(), owner);
-        iou.revokeRole(iou.ADMIN_ROLE(), msg.sender);
+        Payer payer = new Payer(owner, usdc);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(MAINNET_USDC_ETH_CHAINLINK),
@@ -58,7 +50,6 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 
         new TokenBuyer(
             usdc,
-            iou,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
@@ -85,12 +76,7 @@ contract DeployUSDCRinkeby is DeployUSDCScript {
         address admin = owner;
         IERC20Metadata usdc = new TestERC20('USD Coin', 'USDC');
 
-        IOUToken iou = new IOUToken('Nouns USDC IOU', 'NOUUSDC', DECIMALS, msg.sender);
-
-        Payer payer = new Payer(owner, usdc, iou);
-
-        iou.grantRole(iou.MINTER_ROLE(), address(payer));
-        iou.grantRole(iou.BURNER_ROLE(), address(payer));
+        Payer payer = new Payer(owner, usdc);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(RINKEBY_USDC_ETH_CHAINLINK),
@@ -101,7 +87,6 @@ contract DeployUSDCRinkeby is DeployUSDCScript {
 
         new TokenBuyer(
             usdc,
-            iou,
             priceFeed,
             USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount

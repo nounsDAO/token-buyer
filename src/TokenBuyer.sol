@@ -24,8 +24,8 @@ import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/Sa
 import { ReentrancyGuard } from 'openzeppelin-contracts/contracts/security/ReentrancyGuard.sol';
 import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { IPriceFeed } from './IPriceFeed.sol';
-import { IOUToken } from './IOUToken.sol';
 import { IBuyETHCallback } from './IBuyETHCallback.sol';
+import { IPayer } from './IPayer.sol';
 
 /**
  * @notice Use this contract to exchange ETH for any ERC20 token at oracle prices.
@@ -60,9 +60,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     /// @notice 10**paymentTokenDecimals, for the calculation for ETH price
     uint256 public immutable paymentTokenDecimalsDigits;
 
-    /// @notice the ERC20 token that represents this contracts liabilities in `paymentToken`. Assumed to have 18 decimals.
-    IOUToken public immutable iouToken;
-
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       STORAGE VARIABLES
@@ -88,7 +85,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
     address public admin;
 
-    address public payer;
+    IPayer public payer;
 
     modifier onlyAdmin() {
         if (admin != msg.sender) {
@@ -106,7 +103,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
     constructor(
         IERC20Metadata _paymentToken,
-        IOUToken _iouToken,
         IPriceFeed _priceFeed,
         uint256 _baselinePaymentTokenAmount,
         uint256 _minAdminBaselinePaymentTokenAmount,
@@ -120,7 +116,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     ) {
         paymentToken = _paymentToken;
         paymentTokenDecimalsDigits = 10**_paymentToken.decimals();
-        iouToken = _iouToken;
         priceFeed = _priceFeed;
 
         baselinePaymentTokenAmount = _baselinePaymentTokenAmount;
@@ -134,7 +129,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         _transferOwnership(_owner);
         admin = _admin;
 
-        payer = _payer;
+        payer = IPayer(_payer);
     }
 
     /**
@@ -152,7 +147,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     function buyETH(uint256 tokenAmount) external nonReentrant whenNotPaused {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
 
-        paymentToken.safeTransferFrom(msg.sender, payer, amount);
+        paymentToken.safeTransferFrom(msg.sender, address(payer), amount);
+        payer.payBackDebt(amount);
 
         uint256 ethAmount = ethAmountPerTokenAmount(amount);
         safeSendETH(msg.sender, ethAmount, '');
@@ -175,7 +171,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         bytes calldata data
     ) external nonReentrant whenNotPaused {
         uint256 amount = Math.min(tokenAmount, tokenAmountNeeded());
-        address _payer = payer;
+        address _payer = address(payer);
         uint256 balanceBefore = paymentToken.balanceOf(_payer);
         uint256 ethAmount = ethAmountPerTokenAmount(amount);
 
@@ -185,6 +181,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         if (tokensReceived < amount) {
             revert ReceivedInsufficientTokens(amount, tokensReceived);
         }
+        payer.payBackDebt(amount);
 
         emit SoldETH(to, ethAmount, amount);
     }
@@ -225,8 +222,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      * @return uint256 the amount of `paymentToken` this contract is willing to buy in exchange for ETH, in payment token decimals.
      */
     function tokenAmountNeeded() public view returns (uint256) {
-        uint256 _paymentTokenBalance = paymentToken.balanceOf(payer);
-        uint256 iouSupply = iouToken.totalSupply();
+        uint256 _paymentTokenBalance = paymentToken.balanceOf(address(payer));
+        uint256 iouSupply = payer.totalDebt();
         unchecked {
             if (_paymentTokenBalance > baselinePaymentTokenAmount + iouSupply) {
                 return 0;
@@ -346,9 +343,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     }
 
     function setPayer(address newPayer) external onlyOwner {
-        emit PayerSet(payer, newPayer);
+        emit PayerSet(address(payer), newPayer);
 
-        payer = newPayer;
+        payer = IPayer(newPayer);
     }
 
     function setAdmin(address newAdmin) external onlyOwner {

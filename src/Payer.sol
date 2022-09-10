@@ -21,54 +21,78 @@ import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
-import { IOUToken } from './IOUToken.sol';
+import { DebtQueue } from './libs/DebtQueue.sol';
+import { IPayer } from './IPayer.sol';
 
 /**
  * @notice Use this contract to send ERC20 payments, where the ERC20 balance is supplied by {TokenBuyer}. In case of a payment
  * that exceeds the current balance, {Payer} mints {IOUToken}s to the recipient; those tokens can later be redeemed for the payment
  * ERC20 token once there's sufficient balance.
  */
-contract Payer is Ownable {
+contract Payer is IPayer, Ownable {
     using SafeERC20 for IERC20Metadata;
+    using DebtQueue for DebtQueue.DebtDeque;
 
-    error DecimalsMismatch(uint8 paymentDecimals, uint8 iouDecimals);
-
-    event Redeemed(address indexed account, uint256 amount);
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      IMMUTABLES
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
     IERC20Metadata public immutable paymentToken;
 
-    /// @notice the ERC20 token that represents this contracts liabilities in `paymentToken`. Assumed to have 18 decimals.
-    IOUToken public immutable iouToken;
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      STORAGE VARIABLES
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    uint256 public totalDebt;
+    DebtQueue.DebtDeque public queue;
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EVENTS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      CONSTRUCTOR
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
 
     constructor(
         address _owner,
-        IERC20Metadata _paymentToken,
-        IOUToken _iouToken
+        IERC20Metadata _paymentToken
     ) {
-        if (_paymentToken.decimals() != _iouToken.decimals()) {
-            revert DecimalsMismatch(_paymentToken.decimals(), _iouToken.decimals());
-        }
-
         paymentToken = _paymentToken;
-        iouToken = _iouToken;
         _transferOwnership(_owner);
     }
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EXTERNAL FUNCTIONS (ONLY OWNER)
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
 
     /**
      * @param account the account to send or mint to.
      * @param amount the amount of tokens `account` should receive, in {paymentToken} decimals.
      */
-    function sendOrMint(address account, uint256 amount) external onlyOwner {
+    function sendOrRegisterDebt(address account, uint256 amount) external onlyOwner {
         uint256 paymentTokenBalance = paymentToken.balanceOf(address(this));
 
         if (amount <= paymentTokenBalance) {
             paymentToken.safeTransfer(account, amount);
         } else if (paymentTokenBalance > 0) {
             paymentToken.safeTransfer(account, paymentTokenBalance);
-            iouToken.mint(account, amount - paymentTokenBalance);
+            registerDebt(account, amount - paymentTokenBalance);
         } else {
-            iouToken.mint(account, amount);
+            registerDebt(account, amount);
         }
     }
 
@@ -77,27 +101,62 @@ contract Payer is Ownable {
     }
 
     /**
-     * @notice Redeem `account`'s IOU tokens in exchange for `paymentToken` in a best-effort approach, meaning it will
-     * attempt to redeem as much as possible up to `account`'s IOU balance, without reverting even if the amount is zero.
-     * Any account can redeem on behalf of `account`.
-     * @dev this function burns the IOU token balance that gets exchanged for `paymentToken`.
-     * @param account the account whose IOU tokens to redeem in exchange for `paymentToken`s.
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      EXTERNAL FUNCTIONS (PUBLIC)
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
-    function redeem(address account) external {
-        uint256 amount = Math.min(iouToken.balanceOf(account), paymentToken.balanceOf(address(this)));
-        _redeem(account, amount);
-    }
 
-    function redeem(address account, uint256 amount) external {
-        _redeem(account, amount);
-    }
+    /// @notice Pays back debt up to `amount` of `paymentToken`
+    /// @param amount The maximum amount of tokens to send. This is expected to be the token balance of this contract
+    function payBackDebt(uint256 amount) external {
+        while (amount > 0 && !queue.empty()) {
+            DebtQueue.DebtEntry storage debt = queue.front();
 
-    function _redeem(address account, uint256 amount) internal {
-        if (amount > 0) {
-            iouToken.burn(account, amount);
-            paymentToken.safeTransfer(account, amount);
+            uint256 _debtAmount = debt.amount;
+            address _debtAccount = debt.account;
 
-            emit Redeemed(account, amount);
+            if (amount < _debtAmount) {
+                // Not enough to cover entire debt, pay what you can and leave
+                debt.amount -= amount; // update remaining debt
+                totalDebt -= amount;
+                paymentToken.safeTransfer(_debtAccount, amount);
+                emit PaidBackDebt(_debtAccount, amount, false);
+                return;
+            } else {
+                // Enough to cover entire debt entry, pay in full and remove from queue
+                amount -= _debtAmount;
+                totalDebt -= _debtAmount;
+                paymentToken.safeTransfer(_debtAccount, _debtAmount);
+                queue.popFront(); // remove debt entry
+                emit PaidBackDebt(_debtAccount, _debtAmount, true);
+            }
         }
+    }
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      VIEW FUNCTIONS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    function debtOf(address account) view public returns (uint256 amount) {
+        uint256 queueLength = queue.length();
+        for(uint256 i; i < queueLength; ++i) {
+            DebtQueue.DebtEntry storage debtEntry = queue.at(i);
+            if (debtEntry.account == account) {
+                amount += debtEntry.amount;
+            }
+        }
+    }
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      INTERNAL FUNCTIONS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    function registerDebt(address account, uint256 amount) internal {
+        queue.pushBack(DebtQueue.DebtEntry({account: account, amount: amount}));
+        totalDebt += amount;
     }
 }

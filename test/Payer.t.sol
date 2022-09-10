@@ -5,168 +5,188 @@ import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { Payer } from '../src/Payer.sol';
 import { TestERC20 } from './helpers/TestERC20.sol';
-import { IOUToken } from '../src/IOUToken.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract PayerTest is Test {
-    event Redeemed(address indexed account, uint256 amount);
+    event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
 
     Payer payer;
     TestERC20 paymentToken;
-    IOUToken iou;
-    address owner = address(42);
-    address user = address(1234);
+    address owner = address(0x42);
+    address user = address(0x1234);
+    address user2 = address(0x1235);
+    address user3 = address(0x1236);
 
     function setUp() public {
         paymentToken = new TestERC20('Payment Token', 'PAY');
-        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
-        payer = new Payer(owner, paymentToken, iou);
-
-        vm.startPrank(owner);
-        iou.grantRole(iou.MINTER_ROLE(), address(payer));
-        iou.grantRole(iou.BURNER_ROLE(), address(payer));
-        vm.stopPrank();
+        payer = new Payer(owner, paymentToken);
+        vm.label(user, 'user');
     }
 
-    function test_constructor_revertsWhenIOUAndPaymenTokenHaveDifferentDecimals() public {
-        uint8 differentDecimals = 42;
-        TestERC20 pToken = new TestERC20('Payment Token', 'PAY');
-        IOUToken iouToken = new IOUToken('IOU Token', 'IOU', differentDecimals, owner);
-
-        vm.expectRevert(abi.encodeWithSelector(Payer.DecimalsMismatch.selector, 18, 42));
-        payer = new Payer(owner, pToken, iouToken);
-    }
-
-    function test_sendOrMint_revertsWhenCalledByNonOwner() public {
+    function test_sendOrRegisterDebt_revertsWhenCalledByNonOwner() public {
         vm.expectRevert('Ownable: caller is not the owner');
-        payer.sendOrMint(user, 42);
+        payer.sendOrRegisterDebt(user, 42);
     }
 
-    function test_sendOrMint_givenNoPaymentTokenBalancePayInIOUs() public {
+    function test_sendOrRegisterDebt_givenNoPaymentTokenBalanceRegistersDebt() public {
         uint256 amount = 100_000e18;
         vm.prank(owner);
-        payer.sendOrMint(user, amount);
+        payer.sendOrRegisterDebt(user, amount);
 
-        assertEq(iou.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(user), 0);
+        assertEq(payer.debtOf(user), amount);
     }
 
-    function test_sendOrMint_givenEnoughPaymentTokenPaysInToken() public {
+    function test_sendOrRegisterDebt_givenEnoughPaymentTokenPaysInToken() public {
         uint256 amount = 100_000e18;
         paymentToken.mint(address(payer), amount);
         vm.prank(owner);
-        payer.sendOrMint(user, amount);
+        payer.sendOrRegisterDebt(user, amount);
 
-        assertEq(iou.balanceOf(user), 0);
+        assertEq(payer.debtOf(user), 0);
         assertEq(paymentToken.balanceOf(user), amount);
     }
 
-    function test_sendOrMint_givenPartialPaymentTokenBalancePaysInBoth() public {
+    function test_sendOrRegisterDebt_givenPartialPaymentTokenBalancePaysInBoth() public {
         uint256 amount = 100_000e18;
         paymentToken.mint(address(payer), 42_000e18);
         vm.prank(owner);
-        payer.sendOrMint(user, amount);
+        payer.sendOrRegisterDebt(user, amount);
 
-        assertEq(iou.balanceOf(user), 58_000e18);
+        assertEq(payer.debtOf(user), 58_000e18);
         assertEq(paymentToken.balanceOf(user), 42_000e18);
     }
 
-    function test_sendOrMint_zeroDoesntRevert() public {
-        vm.prank(owner);
-        payer.sendOrMint(user, 0);
+    function test_withdrawPaymentToken_revertsIfNotOwner() public {
+        paymentToken.mint(address(payer), 1_000);
 
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
+        vm.expectRevert('Ownable: caller is not the owner');
+        payer.withdrawPaymentToken();
     }
 
-    function test_redeem_givenEnoughPaymentTokenSendsFullAmount() public {
+    function test_withdrawPaymentToken_sendsTokensToOwner() public {
+        paymentToken.mint(address(payer), 1_000);
+
+        vm.prank(owner);
+        payer.withdrawPaymentToken();
+
+        assertEq(paymentToken.balanceOf(owner), 1_000);
+        assertEq(paymentToken.balanceOf(address(payer)), 0);
+    }
+
+    function test_debtOf_returnsDebtOfUser() public {
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, 1000);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user2, 2000);
+
+        assertEq(payer.debtOf(user), 1000);
+        assertEq(payer.debtOf(user2), 2000);
+        assertEq(payer.debtOf(address(0x1111)), 0);
+    }
+
+    function test_debtOf_sumsEntriesForSameUser() public {
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, 1000);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, 2000);
+
+        assertEq(payer.debtOf(user), 3000);
+    }
+
+    function test_totalDebt() public {
+        vm.startPrank(owner);
+        payer.sendOrRegisterDebt(user, 1000);
+        payer.sendOrRegisterDebt(user2, 2000);
+        payer.sendOrRegisterDebt(user3, 3000);
+
+        assertEq(payer.totalDebt(), 6000);
+    }
+
+    function test_payBackDebt_givenEnoughPaymentTokenSendsFullAmount() public {
         uint256 amount = 100_000e18;
-        vm.prank(address(payer));
-        iou.mint(user, amount);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, amount);
+        assertEq(payer.totalDebt(), amount);
+
         paymentToken.mint(address(payer), amount);
+
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(user, amount);
+        emit PaidBackDebt(user, amount, true);
+        payer.payBackDebt(amount);
 
-        payer.redeem(user);
-
-        assertEq(iou.balanceOf(user), 0);
+        assertEq(payer.debtOf(user), 0);
         assertEq(paymentToken.balanceOf(user), amount);
         assertEq(paymentToken.balanceOf(address(payer)), 0);
+        assertEq(payer.totalDebt(), 0);
     }
 
-    function test_redeem_givenPartialPaymentTokenSendsPartialAmount() public {
+    function test_payBackDebt_givenPartialPaymentTokenSendsPartialAmount() public {
         uint256 amount = 100_000e18;
-        vm.prank(address(payer));
-        iou.mint(user, amount);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, amount);
+        assertEq(payer.totalDebt(), amount);
+
         paymentToken.mint(address(payer), amount - 1);
+
         vm.expectEmit(true, true, true, true);
-        emit Redeemed(user, amount - 1);
+        emit PaidBackDebt(user, amount - 1, false);
+        payer.payBackDebt(amount - 1);
 
-        payer.redeem(user);
-
-        assertEq(iou.balanceOf(user), 1);
+        assertEq(payer.debtOf(user), 1);
         assertEq(paymentToken.balanceOf(user), amount - 1);
         assertEq(paymentToken.balanceOf(address(payer)), 0);
+        assertEq(payer.totalDebt(), 1);
     }
 
-    function test_redeem_givenNoPaymentTokenSendsNothing() public {
+    function test_payBackDebt_revertsIfNoPaymentToken() public {
         uint256 amount = 100_000e18;
-        vm.prank(address(payer));
-        iou.mint(user, amount);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, amount);
 
-        payer.redeem(user);
-
-        assertEq(iou.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(user), 0);
+        vm.expectRevert('ERC20: transfer amount exceeds balance');
+        payer.payBackDebt(1);
     }
 
-    function test_redeem_givenNoIOUBalanceSendsNothing() public {
+    function test_payBackDebt_sendsNothingGivenNoDebt() public {
         paymentToken.mint(address(payer), 100_000e18);
 
-        payer.redeem(user);
+        payer.payBackDebt(100_000e18);
 
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 0);
         assertEq(paymentToken.balanceOf(address(payer)), 100_000e18);
     }
 
-    function test_redeem_withExplicitAmount_givenSufficientBalancesTransfersRequestedAmount() public {
+    function test_payBackDebt_paysBackInFIFOOrder() public {
+        vm.startPrank(owner);
+        payer.sendOrRegisterDebt(user, 1000);
+        payer.sendOrRegisterDebt(user2, 2000);
+        payer.sendOrRegisterDebt(user3, 3000);
+        vm.stopPrank();
+
+        assertEq(payer.totalDebt(), 6000);
+
+        paymentToken.mint(address(payer), 1500);
+
+        payer.payBackDebt(1500);
+
+        assertEq(paymentToken.balanceOf(user), 1000);
+        assertEq(paymentToken.balanceOf(user2), 500);
+        assertEq(payer.debtOf(user), 0);
+        assertEq(payer.debtOf(user2), 1500);
+        assertEq(payer.debtOf(user3), 3000);
+
+        assertEq(payer.totalDebt(), 4500);
+    }
+
+    function test_payBackDebt_amountCanBeHigherThanTotalDebt() public {
         uint256 amount = 100_000e18;
-        vm.prank(address(payer));
-        iou.mint(user, amount);
-        paymentToken.mint(address(payer), amount);
-        vm.expectEmit(true, true, true, true);
-        emit Redeemed(user, amount);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, amount);
 
-        payer.redeem(user, amount);
-        assertEq(iou.balanceOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), amount);
-        assertEq(paymentToken.balanceOf(address(payer)), 0);
-    }
+        paymentToken.mint(address(payer), 200_000e18);
+        payer.payBackDebt(200_000e18);
 
-    function test_redeem_withExplicitAmount_revertsGivenNoIOUBalance() public {
-        paymentToken.mint(address(payer), 100_000e18);
-
-        vm.expectRevert('ERC20: burn amount exceeds balance');
-        payer.redeem(user, 100_000e18);
-    }
-
-    function test_redeem_withExplicitAmount_revertsGivenAmountHigherThanIOUs() public {
-        paymentToken.mint(address(payer), 100_000e18);
-        vm.prank(address(payer));
-        iou.mint(user, 42_000e18);
-
-        vm.expectRevert('ERC20: burn amount exceeds balance');
-        payer.redeem(user, 69_000e18);
-    }
-
-    function test_redeem_withExplicitAmount_revertsGivenAmountHigherThanPaymentTokenBalance() public {
-        paymentToken.mint(address(payer), 42_000e18);
-        vm.prank(address(payer));
-        iou.mint(user, 69_000e18);
-
-        vm.expectRevert('ERC20: transfer amount exceeds balance');
-        payer.redeem(user, 69_000e18);
+        assertEq(payer.debtOf(user), 0);
+        assertEq(paymentToken.balanceOf(address(payer)), 100_000e18);
     }
 }

@@ -5,12 +5,12 @@ import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { Payer } from '../src/Payer.sol';
 import { TestERC20 } from './helpers/TestERC20.sol';
-import { IOUToken } from '../src/IOUToken.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 import { IBuyETHCallback } from '../src/IBuyETHCallback.sol';
+import { ETHBuyerBot } from './helpers/ETHBuyerBot.sol';
 
-contract TokenBuyerTest is Test, IBuyETHCallback {
+contract TokenBuyerTest is Test {
     bytes constant STUB_CALLDATA = 'stub calldata';
     bytes constant OWNABLE_ERROR_STRING = 'Ownable: caller is not the owner';
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
@@ -30,29 +30,29 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
     TokenBuyer buyer;
     Payer payer;
     TestERC20 paymentToken;
-    IOUToken iou;
     TestPriceFeed priceFeed;
     uint256 baselinePaymentTokenAmount = 0;
     uint16 botIncentiveBPs = 0;
 
-    address owner = address(42);
-    address admin = address(43);
-    address bot = address(99);
-    address user = address(1234);
-
-    uint256 tokenAmountOverride;
-    bool overrideTokenAmount;
+    address owner = address(0x42);
+    address admin = address(0x43);
+    address bot = address(0x99);
+    address user = address(0x1234);
+    address botOperator = address(0x4444);
+    ETHBuyerBot callbackBot;
 
     function setUp() public {
+        vm.label(owner, 'owner');
+        vm.label(admin, 'admin');
+        vm.label(bot, 'bot');
+        vm.label(user, 'user');
         paymentToken = new TestERC20('Payment Token', 'PAY');
-        iou = new IOUToken('IOU Token', 'IOU', 18, owner);
         priceFeed = new TestPriceFeed();
 
-        payer = new Payer(owner, paymentToken, iou);
+        payer = new Payer(owner, paymentToken);
 
         buyer = new TokenBuyer(
             paymentToken,
-            iou,
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -65,10 +65,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
             address(payer)
         );
 
-        vm.startPrank(owner);
-        iou.grantRole(iou.MINTER_ROLE(), address(payer));
-        iou.grantRole(iou.BURNER_ROLE(), address(payer));
-        vm.stopPrank();
+        callbackBot = new ETHBuyerBot(address(payer), address(paymentToken), STUB_CALLDATA, botOperator);
     }
 
     function test_setPriceFeed_revertsForNonOwner() public {
@@ -100,9 +97,9 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         assertEq(buyer.tokenAmountNeeded(), 100_000e18);
     }
 
-    function test_tokenAmountNeeded_iouSupplyOnly() public {
-        vm.prank(address(payer));
-        iou.mint(address(1), 42_000e18);
+    function test_tokenAmountNeeded_debtOnly() public {
+        vm.prank(address(owner));
+        payer.sendOrRegisterDebt(address(1), 42_000e18);
 
         assertEq(buyer.tokenAmountNeeded(), 42_000e18);
     }
@@ -121,12 +118,13 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         assertEq(buyer.tokenAmountNeeded(), 58_000e18);
     }
 
-    function test_tokenAmountNeeded_baselineAndPaymentTokenBalanceAndIOUSupply() public {
+    function test_tokenAmountNeeded_baselineAndPaymentTokenBalanceAndDebt() public {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(address(1), 11_000e18);
+
         paymentToken.mint(address(payer), 42_000e18);
-        vm.prank(address(payer));
-        iou.mint(address(1), 11_000e18);
 
         assertEq(buyer.tokenAmountNeeded(), 69_000e18);
     }
@@ -199,6 +197,26 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.stopPrank();
 
         assertEq(bot.balance, 1 ether);
+    }
+
+    function test_buyETH_paysBackDebt() public {
+        // user has debt of 2000 tokens
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, 2000e18);
+        assertEq(payer.debtOf(user), 2000e18);
+        
+        // bot buys ETH for 2000 tokens
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(bot, 2000e18);
+        vm.startPrank(bot);
+        paymentToken.approve(address(buyer), 2000e18);
+        buyer.buyETH(2000e18);
+        vm.stopPrank();
+
+        // user has been paid
+        assertEq(paymentToken.balanceOf(user), 2000e18);
+        assertEq(payer.debtOf(user), 0);
     }
 
     function test_buyETH_botCappedToBaselineAmount() public {
@@ -275,45 +293,67 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         buyer.pause();
 
         vm.expectRevert('Pausable: paused');
-        buyer.buyETH(1234, address(this), STUB_CALLDATA);
+        vm.prank(botOperator);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), 2000e18);
+        paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
-        uint256 balanceBefore = address(this).balance;
+        uint256 balanceBefore = address(callbackBot).balance;
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(address(this), 1 ether, 2000e18);
+        emit SoldETH(address(callbackBot), 1 ether, 2000e18);
 
-        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
+        vm.prank(botOperator);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
 
-        assertEq(address(this).balance - balanceBefore, 1 ether);
+        assertEq(address(callbackBot).balance - balanceBefore, 1 ether);
+    }
+
+    function test_buyETHWithCallback_paysBackDebt() public {
+        priceFeed.setPrice(0.0005 ether);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(callbackBot), 2000e18);
+
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(user, 2500e18);
+
+        uint256 balanceBefore = address(callbackBot).balance;
+
+        vm.prank(botOperator);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
+
+        assertEq(address(callbackBot).balance - balanceBefore, 1 ether);
+        assertEq(paymentToken.balanceOf(user), 2000e18);
+        assertEq(paymentToken.balanceOf(address(payer)), 0);
+        assertEq(payer.debtOf(user), 500e18);
     }
 
     function test_buyETHWithCallback_botCappedToBaselineAmount() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), 4000e18);
+        paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
-        uint256 balanceBefore = address(this).balance;
+        uint256 balanceBefore = address(callbackBot).balance;
 
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(address(this), 1 ether, 2000e18);
+        emit SoldETH(address(callbackBot), 1 ether, 2000e18);
 
-        buyer.buyETH(4000e18, address(this), STUB_CALLDATA);
+        vm.prank(botOperator);
+        buyer.buyETH(4000e18, address(callbackBot), STUB_CALLDATA);
 
-        assertEq(address(this).balance - balanceBefore, 1 ether);
-        assertEq(paymentToken.balanceOf(address(this)), 2000e18);
+        assertEq(address(callbackBot).balance - balanceBefore, 1 ether);
+        assertEq(paymentToken.balanceOf(address(callbackBot)), 2000e18);
     }
 
     function test_buyETHWithCallback_revertsWhenContractHasInsufficientETH() public {
         priceFeed.setPrice(0.0005 ether);
-        paymentToken.mint(address(this), 4000e18);
+        paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
         // 2000 tokens at 0.0005 price = 1 ether
@@ -323,22 +363,24 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // EvmError: OutOfFund doesn't result in revert data
         vm.expectRevert();
-        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
+        vm.prank(botOperator);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_revertsWhenTokenPaymentInsufficient() public {
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
-        paymentToken.mint(address(this), 2000e18);
+        paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
-        tokenAmountOverride = 2000e18 - 1;
-        overrideTokenAmount = true;
+        callbackBot.setTokenAmountOverride(2000e18 - 1);
+        callbackBot.setOverrideTokenAmount(true);
 
         vm.expectRevert(
-            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, tokenAmountOverride)
+            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, 2000e18 - 1)
         );
-        buyer.buyETH(2000e18, address(this), STUB_CALLDATA);
+        vm.prank(botOperator);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
     }
 
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
@@ -363,20 +405,6 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         vm.expectRevert('ReentrancyGuard: reentrant call');
         attacker.reenterBuyNoCallback(2000e18);
-    }
-
-    function buyETHCallback(
-        address caller,
-        uint256 amount,
-        bytes calldata data
-    ) external payable override {
-        assertEq(caller, address(this));
-        assertEq(data, STUB_CALLDATA);
-
-        if (overrideTokenAmount) {
-            amount = tokenAmountOverride;
-        }
-        paymentToken.transfer(address(payer), amount);
     }
 
     function test_happyFlow_payingFullyInPaymentToken() public {
@@ -404,10 +432,10 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // send or mint (42K)
         vm.prank(owner);
-        payer.sendOrMint(user, 42_000e18);
+        payer.sendOrRegisterDebt(user, 42_000e18);
 
         // user gets sent that amount right away
-        assertEq(iou.balanceOf(user), 0);
+        assertEq(payer.debtOf(user), 0);
         assertEq(paymentToken.balanceOf(user), 42_000e18);
 
         // fund bot and buyer again
@@ -450,13 +478,13 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
         // send or mint (142K)
         vm.prank(owner);
-        payer.sendOrMint(user, 142_000e18);
-        assertEq(iou.balanceOf(user), 42_000e18);
+        payer.sendOrRegisterDebt(user, 142_000e18);
+        assertEq(payer.debtOf(user), 42_000e18);
         assertEq(paymentToken.balanceOf(user), 100_000e18);
 
         // fund bot and buyer again
         paymentToken.mint(bot, 42_000e18);
-        // 424.2
+        // 424.2 ETH (42K * 0.01 * 1.01)
         vm.deal(address(buyer), 4242 * 10**17);
 
         // bots can top off what's missing (bots buy 42K)
@@ -469,9 +497,8 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 4242 * 10**17);
 
-        // anyone can redeem user's remaining balance(42K)
-        payer.redeem(user);
-        assertEq(iou.balanceOf(user), 0);
+        // user's debt was paid
+        assertEq(payer.debtOf(user), 0);
         assertEq(paymentToken.balanceOf(user), 142_000e18);
 
         // bots can top off what's missing (bots buy 100K)
@@ -486,6 +513,7 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether + 424.2 ether + 1010 ether);
+        assertEq(paymentToken.balanceOf(address(payer)), 100_000e18);
     }
 
     function test_setBaselinePaymentTokenAmount_adminCall_revertsGivenInputLessThanMin() public {
@@ -655,14 +683,14 @@ contract TokenBuyerTest is Test, IBuyETHCallback {
 
     function test_setPayer_worksForOwner() public {
         address newPayer = address(112233);
-        assertFalse(newPayer == buyer.payer());
+        assertFalse(newPayer == address(buyer.payer()));
         vm.expectEmit(true, true, true, true);
-        emit PayerSet(buyer.payer(), newPayer);
+        emit PayerSet(address(buyer.payer()), newPayer);
 
         vm.prank(owner);
         buyer.setPayer(newPayer);
 
-        assertEq(newPayer, buyer.payer());
+        assertEq(newPayer, address(buyer.payer()));
     }
 
     function test_setPayer_revertsForNonOwner() public {
