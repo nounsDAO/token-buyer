@@ -10,6 +10,7 @@ import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract PayerTest is Test {
     event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
+    event RegisteredDebt(address indexed account, uint256 amount);
 
     Payer payer;
     TestERC20 paymentToken;
@@ -31,6 +32,9 @@ contract PayerTest is Test {
 
     function test_sendOrRegisterDebt_givenNoPaymentTokenBalanceRegistersDebt() public {
         uint256 amount = 100_000e18;
+
+        vm.expectEmit(true, true, true, true);
+        emit RegisteredDebt(user, amount);
         vm.prank(owner);
         payer.sendOrRegisterDebt(user, amount);
 
@@ -50,6 +54,9 @@ contract PayerTest is Test {
     function test_sendOrRegisterDebt_givenPartialPaymentTokenBalancePaysInBoth() public {
         uint256 amount = 100_000e18;
         paymentToken.mint(address(payer), 42_000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit RegisteredDebt(user, 58_000e18);
         vm.prank(owner);
         payer.sendOrRegisterDebt(user, amount);
 

@@ -58,6 +58,7 @@ contract Payer is IPayer, Ownable {
      */
 
     event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
+    event RegisteredDebt(address indexed account, uint256 amount);
 
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -155,5 +156,7 @@ contract Payer is IPayer, Ownable {
     function registerDebt(address account, uint256 amount) internal {
         queue.pushBack(DebtQueue.DebtEntry({ account: account, amount: amount }));
         totalDebt += amount;
+
+        emit RegisteredDebt(account, amount);
     }
 }
