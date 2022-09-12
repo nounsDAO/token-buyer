@@ -5,13 +5,12 @@ import 'forge-std/Test.sol';
 import { DebtQueue } from '../src/libs/DebtQueue.sol';
 
 contract DebtQueueTest is Test {
-
     using DebtQueue for DebtQueue.DebtDeque;
 
     DebtQueue.DebtDeque public queue;
 
     function test_popFront() public {
-        queue.pushBack(DebtQueue.DebtEntry({account: address(1), amount: 100}));
+        queue.pushBack(DebtQueue.DebtEntry({ account: address(1), amount: 100 }));
 
         DebtQueue.DebtEntry memory popped = queue.popFront();
 

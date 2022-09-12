@@ -204,7 +204,7 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         payer.sendOrRegisterDebt(user, 2000e18);
         assertEq(payer.debtOf(user), 2000e18);
-        
+
         // bot buys ETH for 2000 tokens
         priceFeed.setPrice(0.0005 ether);
         vm.deal(address(buyer), 1 ether);
@@ -376,9 +376,7 @@ contract TokenBuyerTest is Test {
         callbackBot.setTokenAmountOverride(2000e18 - 1);
         callbackBot.setOverrideTokenAmount(true);
 
-        vm.expectRevert(
-            abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, 2000e18 - 1)
-        );
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, 2000e18 - 1));
         vm.prank(botOperator);
         buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
     }

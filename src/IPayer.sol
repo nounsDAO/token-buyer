@@ -19,5 +19,6 @@ pragma solidity ^0.8.15;
 
 interface IPayer {
     function payBackDebt(uint256 amount) external;
-    function totalDebt() external view returns(uint256);
+
+    function totalDebt() external view returns (uint256);
 }

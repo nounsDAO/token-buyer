@@ -2,7 +2,7 @@
 // OpenZeppelin Contracts (last updated v4.6.0) (utils/structs/DoubleEndedQueue.sol)
 pragma solidity ^0.8.4;
 
-import "openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import 'openzeppelin-contracts/contracts/utils/math/SafeCast.sol';
 
 /**
  * @notice Modified version of Open Zeppelin's DoubleEndedQueue, but using `DebtEntry` instead of `bytes32` for the values in the queue

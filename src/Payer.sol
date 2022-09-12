@@ -65,10 +65,7 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    constructor(
-        address _owner,
-        IERC20Metadata _paymentToken
-    ) {
+    constructor(address _owner, IERC20Metadata _paymentToken) {
         paymentToken = _paymentToken;
         _transferOwnership(_owner);
     }
@@ -139,9 +136,9 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    function debtOf(address account) view public returns (uint256 amount) {
+    function debtOf(address account) public view returns (uint256 amount) {
         uint256 queueLength = queue.length();
-        for(uint256 i; i < queueLength; ++i) {
+        for (uint256 i; i < queueLength; ++i) {
             DebtQueue.DebtEntry storage debtEntry = queue.at(i);
             if (debtEntry.account == account) {
                 amount += debtEntry.amount;
@@ -156,7 +153,7 @@ contract Payer is IPayer, Ownable {
      */
 
     function registerDebt(address account, uint256 amount) internal {
-        queue.pushBack(DebtQueue.DebtEntry({account: account, amount: amount}));
+        queue.pushBack(DebtQueue.DebtEntry({ account: account, amount: amount }));
         totalDebt += amount;
     }
 }

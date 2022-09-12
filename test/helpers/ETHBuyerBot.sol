@@ -6,7 +6,6 @@ import { IBuyETHCallback } from '../../src/IBuyETHCallback.sol';
 import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 
 contract ETHBuyerBot is IBuyETHCallback, Test {
-
     address immutable payer;
     IERC20 immutable paymentToken;
 
@@ -15,7 +14,12 @@ contract ETHBuyerBot is IBuyETHCallback, Test {
     bytes dataToSend;
     address operator;
 
-    constructor(address payer_, address paymentToken_, bytes memory dataToSend_, address operator_) {
+    constructor(
+        address payer_,
+        address paymentToken_,
+        bytes memory dataToSend_,
+        address operator_
+    ) {
         payer = payer_;
         paymentToken = IERC20(paymentToken_);
         dataToSend = dataToSend_;
@@ -43,5 +47,4 @@ contract ETHBuyerBot is IBuyETHCallback, Test {
     function setTokenAmountOverride(uint256 tokenAmountOverride_) external {
         tokenAmountOverride = tokenAmountOverride_;
     }
-
 }
