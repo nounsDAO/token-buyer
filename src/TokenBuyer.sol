@@ -303,6 +303,12 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         emit ETHWithdrawn(to, amount);
     }
 
+    function setAdmin(address newAdmin) external onlyAdminOrOwner {
+        emit AdminSet(admin, newAdmin);
+
+        admin = newAdmin;
+    }
+
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       OWNER TRANSACTIONS
@@ -349,12 +355,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         emit PayerSet(address(payer), newPayer);
 
         payer = IPayer(newPayer);
-    }
-
-    function setAdmin(address newAdmin) external onlyOwner {
-        emit AdminSet(admin, newAdmin);
-
-        admin = newAdmin;
     }
 
     /**

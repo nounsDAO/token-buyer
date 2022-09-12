@@ -642,8 +642,20 @@ contract TokenBuyerTest is Test {
         assertEq(newAdmin, buyer.admin());
     }
 
+    function test_setAdmin_worksForAdmin() public {
+        address newAdmin = address(112233);
+        assertFalse(newAdmin == buyer.admin());
+        vm.expectEmit(true, true, true, true);
+        emit AdminSet(buyer.admin(), newAdmin);
+
+        vm.prank(admin);
+        buyer.setAdmin(newAdmin);
+
+        assertEq(newAdmin, buyer.admin());
+    }
+
     function test_setAdmin_revertsForNonOwner() public {
-        vm.expectRevert(OWNABLE_ERROR_STRING);
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.OnlyAdminOrOwner.selector));
         buyer.setAdmin(address(112233));
     }
 
