@@ -11,6 +11,7 @@ import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 contract PayerTest is Test {
     event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
     event RegisteredDebt(address indexed account, uint256 amount);
+    event TokensWithdrawn(address indexed account, uint256 amount);
 
     Payer payer;
     TestERC20 paymentToken;
@@ -74,6 +75,8 @@ contract PayerTest is Test {
     function test_withdrawPaymentToken_sendsTokensToOwner() public {
         paymentToken.mint(address(payer), 1_000);
 
+        vm.expectEmit(true, true, true, true);
+        emit TokensWithdrawn(owner, 1_000);
         vm.prank(owner);
         payer.withdrawPaymentToken();
 

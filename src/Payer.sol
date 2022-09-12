@@ -59,6 +59,7 @@ contract Payer is IPayer, Ownable {
 
     event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
     event RegisteredDebt(address indexed account, uint256 amount);
+    event TokensWithdrawn(address indexed account, uint256 amount);
 
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -95,7 +96,11 @@ contract Payer is IPayer, Ownable {
     }
 
     function withdrawPaymentToken() external onlyOwner {
-        paymentToken.safeTransfer(owner(), paymentToken.balanceOf(address(this)));
+        address to = owner();
+        uint256 amount = paymentToken.balanceOf(address(this));
+        paymentToken.safeTransfer(to, amount);
+
+        emit TokensWithdrawn(to, amount);
     }
 
     /**
