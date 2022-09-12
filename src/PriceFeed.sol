@@ -61,7 +61,7 @@ contract PriceFeed is IPriceFeed {
     }
 
     /**
-     * @return uin256 Token/ETH price in WAD format
+     * @return uint256 ETH/Token price in WAD format
      */
     function price() external view override returns (uint256) {
         (, int256 chainlinkPrice, , uint256 updatedAt, ) = chainlink.latestRoundData();

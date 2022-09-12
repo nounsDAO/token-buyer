@@ -39,15 +39,15 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
     error OnlyAdmin();
     error OnlyAdminOrOwner();
-    error InvalidBotIncentiveBPs();
+    error InvalidBotDiscountBPs();
     error InvalidBaselinePaymentTokenAmount();
 
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
-    event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event BotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
     event BaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event ETHWithdrawn(address indexed to, uint256 amount);
-    event MinAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
-    event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MinAdminBotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MaxAdminBotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
     event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event PriceFeedSet(address oldFeed, address newFeed);
@@ -76,12 +76,12 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
     uint256 public maxAdminBaselinePaymentTokenAmount;
 
-    /// @notice the amount of basis points to increase `paymentToken` price by, to increase the incentive to transact with this contract.
-    uint16 public botIncentiveBPs;
+    /// @notice the amount of basis points to decrease the price by, to increase the incentive to transact with this contract.
+    uint16 public botDiscountBPs;
 
-    uint16 public minAdminBotIncentiveBPs;
+    uint16 public minAdminBotDiscountBPs;
 
-    uint16 public maxAdminBotIncentiveBPs;
+    uint16 public maxAdminBotDiscountBPs;
 
     address public admin;
 
@@ -107,9 +107,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 _baselinePaymentTokenAmount,
         uint256 _minAdminBaselinePaymentTokenAmount,
         uint256 _maxAdminBaselinePaymentTokenAmount,
-        uint16 _botIncentiveBPs,
-        uint16 _minAdminBotIncentiveBPs,
-        uint16 _maxAdminBotIncentiveBPs,
+        uint16 _botDiscountBPs,
+        uint16 _minAdminBotDiscountBPs,
+        uint16 _maxAdminBotDiscountBPs,
         address _owner,
         address _admin,
         address _payer
@@ -122,9 +122,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         minAdminBaselinePaymentTokenAmount = _minAdminBaselinePaymentTokenAmount;
         maxAdminBaselinePaymentTokenAmount = _maxAdminBaselinePaymentTokenAmount;
 
-        botIncentiveBPs = _botIncentiveBPs;
-        minAdminBotIncentiveBPs = _minAdminBotIncentiveBPs;
-        maxAdminBotIncentiveBPs = _maxAdminBotIncentiveBPs;
+        botDiscountBPs = _botDiscountBPs;
+        minAdminBotDiscountBPs = _minAdminBotDiscountBPs;
+        maxAdminBotDiscountBPs = _maxAdminBotDiscountBPs;
 
         _transferOwnership(_owner);
         admin = _admin;
@@ -140,7 +140,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Buy ETH from this contract in exchange for the ERC20 {paymentToken} this token wants to acquire. The price
-     * is determined using `priceFeed` plus `botIncentiveBPs` basis points.
+     * is determined using `priceFeed` plus `botDiscountBPs` basis points.
      * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible.
      * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
      */
@@ -159,7 +159,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
 
     /**
      * @notice Buy ETH from this contract in exchange for the ERC20 {paymentToken} this token wants to acquire. The price
-     * is determined using {priceFeed} plus {botIncentiveBPs} basis points.
+     * is determined using {priceFeed} plus {botDiscountBPs} basis points.
      * @dev if `tokenAmount > tokenAmountNeeded()` uses the maximum amount possible. This function sends ETH to the `to` address
      * by calling the callback function IBuyETHCallback#buyETHCallback.
      * @param tokenAmount the amount of ERC20 tokens msg.sender wishes to sell to this contract in exchange for ETH, in token decimals.
@@ -235,15 +235,22 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
+    /**
+     * @return The amount of ETH the contract will sell for `tokenAmount` of tokens
+     * Example:
+     *      tokenAmount 3400000000 (3400 USDC) (6 dec)
+     *      price() = 1745910000000000000000 (18 decimals)
+     *      (3400000000 * 1e36) / 1745910000000000000000 / 1e6 = 1.947408515e18
+     */
     function ethAmountPerTokenAmount(uint256 tokenAmount) public view returns (uint256) {
         unchecked {
-            return (tokenAmount * price()) / paymentTokenDecimalsDigits;
+            return ((tokenAmount * 1e36) / price()) / paymentTokenDecimalsDigits;
         }
     }
 
     function price() public view returns (uint256) {
         unchecked {
-            return (priceFeed.price() * (botIncentiveBPs + 10_000)) / 10_000;
+            return (priceFeed.price() * (10_000 - botDiscountBPs)) / 10_000;
         }
     }
 
@@ -253,17 +260,17 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    function setBotIncentiveBPs(uint16 newBotIncentiveBPs) external onlyAdminOrOwner {
+    function setBotDiscountBPs(uint16 newBotDiscountBPs) external onlyAdminOrOwner {
         if (
             admin == msg.sender &&
-            (newBotIncentiveBPs < minAdminBotIncentiveBPs || newBotIncentiveBPs > maxAdminBotIncentiveBPs)
+            (newBotDiscountBPs < minAdminBotDiscountBPs || newBotDiscountBPs > maxAdminBotDiscountBPs)
         ) {
-            revert InvalidBotIncentiveBPs();
+            revert InvalidBotDiscountBPs();
         }
 
-        emit BotIncentiveBPsSet(botIncentiveBPs, newBotIncentiveBPs);
+        emit BotDiscountBPsSet(botDiscountBPs, newBotDiscountBPs);
 
-        botIncentiveBPs = newBotIncentiveBPs;
+        botDiscountBPs = newBotDiscountBPs;
     }
 
     /**
@@ -315,16 +322,16 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    function setMinAdminBotIncentiveBPs(uint16 newMinAdminBotIncentiveBPs) external onlyOwner {
-        emit MinAdminBotIncentiveBPsSet(minAdminBotIncentiveBPs, newMinAdminBotIncentiveBPs);
+    function setMinAdminBotDiscountBPs(uint16 newMinAdminBotDiscountBPs) external onlyOwner {
+        emit MinAdminBotDiscountBPsSet(minAdminBotDiscountBPs, newMinAdminBotDiscountBPs);
 
-        minAdminBotIncentiveBPs = newMinAdminBotIncentiveBPs;
+        minAdminBotDiscountBPs = newMinAdminBotDiscountBPs;
     }
 
-    function setMaxAdminBotIncentiveBPs(uint16 newMaxAdminBotIncentiveBPs) external onlyOwner {
-        emit MaxAdminBotIncentiveBPsSet(maxAdminBotIncentiveBPs, newMaxAdminBotIncentiveBPs);
+    function setMaxAdminBotDiscountBPs(uint16 newMaxAdminBotDiscountBPs) external onlyOwner {
+        emit MaxAdminBotDiscountBPsSet(maxAdminBotDiscountBPs, newMaxAdminBotDiscountBPs);
 
-        maxAdminBotIncentiveBPs = newMaxAdminBotIncentiveBPs;
+        maxAdminBotDiscountBPs = newMaxAdminBotDiscountBPs;
     }
 
     function setMinAdminBaselinePaymentTokenAmount(uint256 newMinAdminBaselinePaymentTokenAmount) external onlyOwner {

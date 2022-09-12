@@ -16,11 +16,11 @@ contract TokenBuyerTest is Test {
     bytes4 constant ERROR_SELECTOR = 0x08c379a0; // See: https://docs.soliditylang.org/en/v0.8.16/control-structures.html?highlight=0x08c379a0
 
     event SoldETH(address indexed to, uint256 ethOut, uint256 tokenIn);
-    event BotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event BotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
     event BaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event ETHWithdrawn(address indexed to, uint256 amount);
-    event MinAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
-    event MaxAdminBotIncentiveBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MinAdminBotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
+    event MaxAdminBotDiscountBPsSet(uint16 oldBPs, uint16 newBPs);
     event MinAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event MaxAdminBaselinePaymentTokenAmountSet(uint256 oldAmount, uint256 newAmount);
     event PriceFeedSet(address oldFeed, address newFeed);
@@ -32,7 +32,7 @@ contract TokenBuyerTest is Test {
     TestERC20 paymentToken;
     TestPriceFeed priceFeed;
     uint256 baselinePaymentTokenAmount = 0;
-    uint16 botIncentiveBPs = 0;
+    uint16 botDiscountBPs = 0;
 
     address owner = address(0x42);
     address admin = address(0x43);
@@ -57,7 +57,7 @@ contract TokenBuyerTest is Test {
             baselinePaymentTokenAmount,
             0,
             10_000_000e18,
-            botIncentiveBPs,
+            botDiscountBPs,
             0,
             10_000,
             owner,
@@ -82,7 +82,7 @@ contract TokenBuyerTest is Test {
         emit PriceFeedSet(address(buyer.priceFeed()), address(newFeed));
 
         vm.prank(owner);
-        buyer.setMaxAdminBotIncentiveBPs(142);
+        buyer.setMaxAdminBotDiscountBPs(142);
 
         vm.prank(owner);
         buyer.setPriceFeed(newFeed);
@@ -132,7 +132,7 @@ contract TokenBuyerTest is Test {
     function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
 
         (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
 
@@ -140,35 +140,35 @@ contract TokenBuyerTest is Test {
         assertEq(ethAmount, 50 ether);
     }
 
-    function test_price_botIncentiveZero() public {
-        priceFeed.setPrice(1234 gwei);
+    function test_price_botDiscountZero() public {
+        priceFeed.setPrice(1234 * 1e18);
 
         uint256 price = buyer.price();
 
-        assertEq(price, 1234 gwei);
+        assertEq(price, 1234 * 1e18);
     }
 
-    function test_price_botIncentive50BPs() public {
+    function test_price_botDiscount50BPs() public {
         vm.prank(owner);
-        buyer.setBotIncentiveBPs(50);
+        buyer.setBotDiscountBPs(50);
 
-        priceFeed.setPrice(4242 gwei);
+        priceFeed.setPrice(1700 * 1e18);
 
         uint256 price = buyer.price();
 
-        // 4263.21 gwei
-        assertEq(price, 426321 * 10**7);
+        // 1700 * (1-0.005)
+        assertEq(price, 1691.5 * 1e18);
     }
 
-    function test_price_botIncentive2X() public {
+    function test_price_botDiscountHalfPrice() public {
         vm.prank(owner);
-        buyer.setBotIncentiveBPs(10_000);
+        buyer.setBotDiscountBPs(5_000);
 
-        priceFeed.setPrice(4242 gwei);
+        priceFeed.setPrice(4242 * 1e18);
 
         uint256 price = buyer.price();
 
-        assertEq(price, 8484 gwei);
+        assertEq(price, 2121 * 1e18);
     }
 
     function test_buyETH_revertsWhenPaused() public {
@@ -182,7 +182,7 @@ contract TokenBuyerTest is Test {
     function test_buyETH_botBuysExactBaselineAmount() public {
         // Say ETH is worth $2000, then the oracle price denominated in ETH would be
         // 1 / 2000 = 0.0005
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
@@ -206,7 +206,7 @@ contract TokenBuyerTest is Test {
         assertEq(payer.debtOf(user), 2000e18);
 
         // bot buys ETH for 2000 tokens
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.startPrank(bot);
@@ -220,7 +220,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_botCappedToBaselineAmount() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 4000e18);
         vm.prank(owner);
@@ -239,7 +239,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenContractHasInsufficientETH() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
@@ -254,7 +254,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenTokenApprovalInsufficient() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
@@ -270,7 +270,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETH_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 4000e18);
         vm.prank(owner);
@@ -298,7 +298,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
@@ -315,7 +315,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_paysBackDebt() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
 
@@ -334,7 +334,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_botCappedToBaselineAmount() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
@@ -352,7 +352,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_revertsWhenContractHasInsufficientETH() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
@@ -368,7 +368,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_revertsWhenTokenPaymentInsufficient() public {
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
@@ -383,7 +383,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
@@ -395,7 +395,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETHWithCallback_maliciousBuyerCantReenterOtherBuyETHFunction() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(0.0005 ether);
+        priceFeed.setPrice(2000 * 1e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
@@ -406,24 +406,27 @@ contract TokenBuyerTest is Test {
     }
 
     function test_happyFlow_payingFullyInPaymentToken() public {
-        priceFeed.setPrice(0.01 ether);
+        priceFeed.setPrice(100e18);
         vm.prank(owner);
-        // 1% incentive
-        buyer.setBotIncentiveBPs(100);
-        // set buffer (100K)
+        // 1% discount
+        buyer.setBotDiscountBPs(100);
+
+        assertEq(buyer.price(), 99e18);
+
+        // set buffer
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(100_000e18);
+        buyer.setBaselinePaymentTokenAmount(99_990e18);
 
         // fund bot and buyer
-        paymentToken.mint(bot, 100_000e18);
+        paymentToken.mint(bot, 99_990e18);
         vm.deal(address(buyer), 1010 ether);
 
-        // bots buy buffer (100K)
+        // bots buy buffer
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), 100_000e18);
-        buyer.buyETH(100_000e18);
+        paymentToken.approve(address(buyer), 99_990e18);
+        buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether);
@@ -438,80 +441,86 @@ contract TokenBuyerTest is Test {
 
         // fund bot and buyer again
         paymentToken.mint(bot, 42_000e18);
-        vm.deal(address(buyer), 424.2 ether);
+
+        // 42000 / 99 = 424.242424242
+        vm.deal(address(buyer), 424242424242424242424);
 
         // bots can top off what's missing (bots buy 42K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 424.2 ether, 42_000e18);
+        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
-        assertEq(bot.balance, 1010 ether + 424.2 ether);
+        assertEq(bot.balance, 1010 ether + 424242424242424242424);
     }
 
     function test_happyFlow_payingOverTheBuffer() public {
-        priceFeed.setPrice(0.01 ether);
+        priceFeed.setPrice(100e18);
         vm.prank(owner);
-        // 1% incentive
-        buyer.setBotIncentiveBPs(100);
-        // set buffer (100K)
+        // 1% discount
+        buyer.setBotDiscountBPs(100);
+
+        assertEq(buyer.price(), 99e18);
+
+        // set buffer
         vm.prank(owner);
-        buyer.setBaselinePaymentTokenAmount(100_000e18);
+        buyer.setBaselinePaymentTokenAmount(99_990e18);
 
         // fund bot and buyer
-        paymentToken.mint(bot, 100_000e18);
+        paymentToken.mint(bot, 99_990e18);
         vm.deal(address(buyer), 1010 ether);
 
-        // bots buy buffer (100K)
+        // bots buy buffer
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), 100_000e18);
-        buyer.buyETH(100_000e18);
+        paymentToken.approve(address(buyer), 99_990e18);
+        buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
         assertEq(bot.balance, 1010 ether);
 
-        // send or mint (142K)
+        // send or mint (141,990)
         vm.prank(owner);
-        payer.sendOrRegisterDebt(user, 142_000e18);
+        payer.sendOrRegisterDebt(user, 141_990e18);
         assertEq(payer.debtOf(user), 42_000e18);
-        assertEq(paymentToken.balanceOf(user), 100_000e18);
+        assertEq(paymentToken.balanceOf(user), 99_990e18);
 
         // fund bot and buyer again
         paymentToken.mint(bot, 42_000e18);
-        // 424.2 ETH (42K * 0.01 * 1.01)
-        vm.deal(address(buyer), 4242 * 10**17);
+
+        // 42000 / 99 = 424.242424242
+        vm.deal(address(buyer), 424242424242424242424);
 
         // bots can top off what's missing (bots buy 42K)
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 424.2 ether, 42_000e18);
+        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
         buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
-        assertEq(bot.balance, 1010 ether + 4242 * 10**17);
+        assertEq(bot.balance, 1010 ether + 424242424242424242424);
 
         // user's debt was paid
         assertEq(payer.debtOf(user), 0);
-        assertEq(paymentToken.balanceOf(user), 142_000e18);
+        assertEq(paymentToken.balanceOf(user), 141_990e18);
 
-        // bots can top off what's missing (bots buy 100K)
+        // bots can top off what's missing (bots buy ~100K)
         // fund bot and buyer again
-        paymentToken.mint(bot, 100_000e18);
+        paymentToken.mint(bot, 99_990e18);
         vm.deal(address(buyer), 1010 ether);
         vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 100_000e18);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
-        paymentToken.approve(address(buyer), 100_000e18);
-        buyer.buyETH(100_000e18);
+        paymentToken.approve(address(buyer), 99_990e18);
+        buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
-        assertEq(bot.balance, 1010 ether + 424.2 ether + 1010 ether);
-        assertEq(paymentToken.balanceOf(address(payer)), 100_000e18);
+        assertEq(bot.balance, 1010 ether + 424242424242424242424 + 1010 ether);
+        assertEq(paymentToken.balanceOf(address(payer)), 99_990e18);
     }
 
     function test_setBaselinePaymentTokenAmount_adminCall_revertsGivenInputLessThanMin() public {
@@ -570,64 +579,64 @@ contract TokenBuyerTest is Test {
         assertEq(10_001, buyer.baselinePaymentTokenAmount());
     }
 
-    function test_setBotIncentiveBPs_adminCall_revertsGivenInputLessThanMin() public {
+    function test_setBotDiscountBPs_adminCall_revertsGivenInputLessThanMin() public {
         vm.prank(owner);
-        buyer.setMinAdminBotIncentiveBPs(50);
+        buyer.setMinAdminBotDiscountBPs(50);
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotIncentiveBPs.selector));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotDiscountBPs.selector));
         vm.prank(admin);
-        buyer.setBotIncentiveBPs(49);
+        buyer.setBotDiscountBPs(49);
     }
 
-    function test_setBotIncentiveBPs_adminCall_revertsGivenInputGreaterThanMax() public {
+    function test_setBotDiscountBPs_adminCall_revertsGivenInputGreaterThanMax() public {
         vm.prank(owner);
-        buyer.setMaxAdminBotIncentiveBPs(100);
+        buyer.setMaxAdminBotDiscountBPs(100);
 
-        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotIncentiveBPs.selector));
+        vm.expectRevert(abi.encodeWithSelector(TokenBuyer.InvalidBotDiscountBPs.selector));
         vm.prank(admin);
-        buyer.setBotIncentiveBPs(101);
+        buyer.setBotDiscountBPs(101);
     }
 
-    function test_setBotIncentiveBPs_adminCall_worksGivenValidInput() public {
+    function test_setBotDiscountBPs_adminCall_worksGivenValidInput() public {
         vm.prank(owner);
-        buyer.setBotIncentiveBPs(74);
+        buyer.setBotDiscountBPs(74);
 
         vm.startPrank(owner);
-        buyer.setMinAdminBotIncentiveBPs(50);
-        buyer.setMaxAdminBotIncentiveBPs(100);
+        buyer.setMinAdminBotDiscountBPs(50);
+        buyer.setMaxAdminBotDiscountBPs(100);
         vm.stopPrank();
 
         vm.expectEmit(true, true, true, true);
-        emit BotIncentiveBPsSet(74, 75);
+        emit BotDiscountBPsSet(74, 75);
 
         vm.prank(admin);
-        buyer.setBotIncentiveBPs(75);
+        buyer.setBotDiscountBPs(75);
 
-        assertEq(75, buyer.botIncentiveBPs());
+        assertEq(75, buyer.botDiscountBPs());
     }
 
-    function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputLessThanMin() public {
+    function test_setBotDiscountBPs_ownerCall_allowsSetGivenInputLessThanMin() public {
         vm.prank(owner);
-        buyer.setMinAdminBotIncentiveBPs(50);
+        buyer.setMinAdminBotDiscountBPs(50);
         vm.expectEmit(true, true, true, true);
-        emit BotIncentiveBPsSet(0, 49);
+        emit BotDiscountBPsSet(0, 49);
 
         vm.prank(owner);
-        buyer.setBotIncentiveBPs(49);
+        buyer.setBotDiscountBPs(49);
 
-        assertEq(49, buyer.botIncentiveBPs());
+        assertEq(49, buyer.botDiscountBPs());
     }
 
-    function test_setBotIncentiveBPs_ownerCall_allowsSetGivenInputGreaterThanMax() public {
+    function test_setBotDiscountBPs_ownerCall_allowsSetGivenInputGreaterThanMax() public {
         vm.prank(owner);
-        buyer.setMaxAdminBotIncentiveBPs(100);
+        buyer.setMaxAdminBotDiscountBPs(100);
         vm.expectEmit(true, true, true, true);
-        emit BotIncentiveBPsSet(0, 101);
+        emit BotDiscountBPsSet(0, 101);
 
         vm.prank(owner);
-        buyer.setBotIncentiveBPs(101);
+        buyer.setBotDiscountBPs(101);
 
-        assertEq(101, buyer.botIncentiveBPs());
+        assertEq(101, buyer.botDiscountBPs());
     }
 
     function test_setAdmin_worksForOwner() public {
@@ -737,30 +746,30 @@ contract TokenBuyerTest is Test {
         buyer.withdrawETH();
     }
 
-    function test_setMinAdminBotIncentiveBPs_worksForOwner() public {
+    function test_setMinAdminBotDiscountBPs_worksForOwner() public {
         vm.expectEmit(true, true, true, true);
-        emit MinAdminBotIncentiveBPsSet(0, 42);
+        emit MinAdminBotDiscountBPsSet(0, 42);
 
         vm.prank(owner);
-        buyer.setMinAdminBotIncentiveBPs(42);
+        buyer.setMinAdminBotDiscountBPs(42);
     }
 
-    function test_setMinAdminBotIncentiveBPs_revertsForNonOwner() public {
+    function test_setMinAdminBotDiscountBPs_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
-        buyer.setMinAdminBotIncentiveBPs(42);
+        buyer.setMinAdminBotDiscountBPs(42);
     }
 
-    function test_setMaxAdminBotIncentiveBPs_worksForOwner() public {
+    function test_setMaxAdminBotDiscountBPs_worksForOwner() public {
         vm.expectEmit(true, true, true, true);
-        emit MaxAdminBotIncentiveBPsSet(10_000, 142);
+        emit MaxAdminBotDiscountBPsSet(10_000, 142);
 
         vm.prank(owner);
-        buyer.setMaxAdminBotIncentiveBPs(142);
+        buyer.setMaxAdminBotDiscountBPs(142);
     }
 
-    function test_setMaxAdminBotIncentiveBPs_revertsForNonOwner() public {
+    function test_setMaxAdminBotDiscountBPs_revertsForNonOwner() public {
         vm.expectRevert(OWNABLE_ERROR_STRING);
-        buyer.setMaxAdminBotIncentiveBPs(142);
+        buyer.setMaxAdminBotDiscountBPs(142);
     }
 
     function test_setMinAdminBaselinePaymentTokenAmount_worksForOwner() public {

@@ -29,7 +29,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     address constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
 
-    address constant DAI_ETH_CHAINLINK = 0x773616E4d11A78F511299002da57A0a94577F1f4;
+    address constant ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
 
     // UNISWAP V3
     address constant SWAP_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
@@ -38,20 +38,20 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
     address constant UNIV3_DAI_USDC = 0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168;
     uint24 constant DAI_USDC_POOL_FEE = 100;
 
-    uint256 constant DAI_BUYER_WANTS = 100_000 ether;
+    uint256 constant DAI_BUYER_WANTS = 100_000e18;
 
     address constant DAI_WHALE = 0x8EB8a3b98659Cce290402893d0123abb75E3ab28;
 
     // PriceFeed config
-    uint256 constant PRICE_UPPER_BOUND = 0.01e18; // i.e. 100 tokens buy 1 ETH
-    uint256 constant PRICE_LOWER_BOUND = 0.00001e18; // i.e. 100K tokens buy 1 ETH
+    uint256 constant PRICE_UPPER_BOUND = 100_000e18;
+    uint256 constant PRICE_LOWER_BOUND = 100e18;
 
     IERC20Metadata dai;
     TokenBuyer buyer;
     Payer payer;
     PriceFeed priceFeed;
     uint256 baselinePaymentTokenAmount;
-    uint16 botIncentiveBPs;
+    uint16 botDiscountBPs;
 
     address owner = address(42);
     address admin = address(43);
@@ -67,8 +67,8 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
         dai = IERC20Metadata(DAI_ADDRESS);
         priceFeed = new PriceFeed(
-            AggregatorV3Interface(DAI_ETH_CHAINLINK),
-            10 hours,
+            AggregatorV3Interface(ETH_USD_CHAINLINK),
+            1 hours,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
         );
@@ -76,14 +76,14 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
         payer = new Payer(owner, dai);
 
-        botIncentiveBPs = 50;
+        botDiscountBPs = 50;
         buyer = new TokenBuyer(
             dai,
             priceFeed,
             baselinePaymentTokenAmount,
             0,
             10_000_000 * 10e18,
-            botIncentiveBPs,
+            botDiscountBPs,
             0,
             10_000,
             owner,
@@ -150,7 +150,7 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         dai.transfer(msg.sender, flashloanPaybackAmount);
 
         uint256 earningsBeforeGas = (grossDAI - flashloanPaybackAmount) / 1 ether;
-        assertGt(earningsBeforeGas, 700);
+        assertGt(earningsBeforeGas, 0);
     }
 
     function swapETHForDAI(address who, uint256 amountIn) internal returns (uint256 amountOut) {

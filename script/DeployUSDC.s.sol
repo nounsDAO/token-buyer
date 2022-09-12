@@ -19,12 +19,12 @@ contract DeployUSDCScript is Script {
     uint8 constant MAINNET_USDC_DECIMALS = 6;
 
     // PriceFeed config
-    address constant MAINNET_USDC_ETH_CHAINLINK = 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4;
-    uint256 constant USDC_ETH_CHAINLINK_HEARTBEAT = 24 hours;
-    uint256 constant PRICE_UPPER_BOUND = 0.01e18; // i.e. 100 tokens buy 1 ETH
-    uint256 constant PRICE_LOWER_BOUND = 0.00001e18; // i.e. 100K tokens buy 1 ETH
+    address constant MAINNET_ETH_USDC_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    uint256 constant USDC_ETH_CHAINLINK_HEARTBEAT = 1 hours;
+    uint256 constant PRICE_UPPER_BOUND = 100_000e18;
+    uint256 constant PRICE_LOWER_BOUND = 100e18;
 
-    address constant RINKEBY_USDC_ETH_CHAINLINK = 0xdCA36F27cbC4E38aE16C4E9f99D39b42337F6dcf;
+    address constant RINKEBY_USDC_ETH_CHAINLINK = 0x8A753747A1Fa494EC906cE90E9f37563A8AF630e;
 
     // Buyer config
     uint256 constant USD_POSITION_IN_USD = 1_000_000;
@@ -42,7 +42,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         Payer payer = new Payer(owner, usdc);
 
         PriceFeed priceFeed = new PriceFeed(
-            AggregatorV3Interface(MAINNET_USDC_ETH_CHAINLINK),
+            AggregatorV3Interface(MAINNET_ETH_USDC_CHAINLINK),
             USDC_ETH_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
@@ -80,6 +80,46 @@ contract DeployUSDCRinkeby is DeployUSDCScript {
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(RINKEBY_USDC_ETH_CHAINLINK),
+            USDC_ETH_CHAINLINK_HEARTBEAT,
+            PRICE_LOWER_BOUND,
+            PRICE_UPPER_BOUND
+        );
+
+        new TokenBuyer(
+            usdc,
+            priceFeed,
+            USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
+            0, // minAdminBaselinePaymentTokenAmount
+            2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
+            0, // botIncentiveBPs
+            0, // minAdminBotIncentiveBPs
+            150, // maxAdminBotIncentiveBPs
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.stopBroadcast();
+    }
+}
+
+contract DeployUSDCGoerli is DeployUSDCScript {
+    uint8 constant DECIMALS = 18;
+
+    address constant GOERLI_USD_ETH_CHAINLINK = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
+    uint256 constant GOERLI_USD_ETH_CHAINLINK_HEARTBEAT = 1 hours;
+
+    function run() public {
+        vm.startBroadcast();
+
+        address owner = msg.sender;
+        address admin = owner;
+        IERC20Metadata usdc = new TestERC20('USD Coin', 'USDC');
+
+        Payer payer = new Payer(owner, usdc);
+
+        PriceFeed priceFeed = new PriceFeed(
+            AggregatorV3Interface(GOERLI_USD_ETH_CHAINLINK),
             USDC_ETH_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
