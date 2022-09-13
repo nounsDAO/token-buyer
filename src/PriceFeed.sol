@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
 
-/// @title PriceFeed
-
 /*********************************
  * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
  * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
@@ -24,6 +22,9 @@ import { SafeCast } from 'openzeppelin-contracts/contracts/utils/math/SafeCast.s
 /**
  * @notice Provides price data to {TokenBuyer}.
  */
+
+/// @title PriceFeed
+/// @notice Provides price data to `TokenBuyer` using a Chainlink price feed
 contract PriceFeed is IPriceFeed {
     using SafeCast for int256;
 
@@ -32,11 +33,28 @@ contract PriceFeed is IPriceFeed {
     error StaleOracle(uint256 updatedAt);
     error InvalidPrice(uint256 priceWAD);
 
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      IMMUTABLES
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    /// @notice Chainlink price feed
     AggregatorV3Interface public immutable chainlink;
+
+    /// @notice Number of decimals of the chainlink price feed answer
     uint8 public immutable decimals;
+
+    /// @dev A factor to multiply or divide by to get to 18 decimals
     uint256 public immutable decimalFactor;
+
+    /// @dev Max staleness allowed from chainlink, in seconds
     uint256 public immutable staleAfter;
+
+    /// @dev Sanity check: minimal price allowed
     uint256 public immutable priceLowerBound;
+
+    /// @dev Sanity check: maximal price allowed
     uint256 public immutable priceUpperBound;
 
     constructor(
@@ -60,9 +78,9 @@ contract PriceFeed is IPriceFeed {
         decimalFactor = decimalFactorTemp;
     }
 
-    /**
-     * @return uint256 ETH/Token price in WAD format
-     */
+    /// @notice Returns the price of ETH/Token by fetching from Chainlink
+    /// @dev Explain to a developer any extra details
+    /// @return The price is returned in WAD (18 decimals)
     function price() external view override returns (uint256) {
         (, int256 chainlinkPrice, , uint256 updatedAt, ) = chainlink.latestRoundData();
 
@@ -78,6 +96,7 @@ contract PriceFeed is IPriceFeed {
         return priceWAD;
     }
 
+    /// @dev convert price to 18 decimals
     function toWAD(uint256 chainlinkPrice) internal view returns (uint256) {
         if (decimals == WAD_DECIMALS) {
             return chainlinkPrice;
