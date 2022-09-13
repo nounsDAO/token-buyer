@@ -2,7 +2,6 @@
 pragma solidity ^0.8.15;
 
 import 'forge-std/Script.sol';
-import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import { Payer } from '../src/Payer.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
@@ -36,10 +35,9 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 
         address owner = MAINNET_NOUNS_EXECUTOR;
         address admin = TECHPOD_MULTISIG;
-        IERC20Metadata usdc = IERC20Metadata(MAINNET_USDC);
         uint8 decimals = MAINNET_USDC_DECIMALS;
 
-        Payer payer = new Payer(owner, usdc);
+        Payer payer = new Payer(owner, MAINNET_USDC);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(MAINNET_ETH_USD_CHAINLINK),
@@ -49,7 +47,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            usdc,
+            MAINNET_USDC,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
@@ -66,57 +64,19 @@ contract DeployUSDCMainnet is DeployUSDCScript {
     }
 }
 
-contract DeployUSDCRinkeby is DeployUSDCScript {
-    uint8 constant DECIMALS = 18;
-
-    function run() public {
-        vm.startBroadcast();
-
-        address owner = msg.sender;
-        address admin = owner;
-        IERC20Metadata usdc = new TestERC20('USD Coin', 'USDC');
-
-        Payer payer = new Payer(owner, usdc);
-
-        PriceFeed priceFeed = new PriceFeed(
-            AggregatorV3Interface(RINKEBY_USDC_ETH_CHAINLINK),
-            ETH_USD_CHAINLINK_HEARTBEAT,
-            PRICE_LOWER_BOUND,
-            PRICE_UPPER_BOUND
-        );
-
-        new TokenBuyer(
-            usdc,
-            priceFeed,
-            USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
-            0, // minAdminBaselinePaymentTokenAmount
-            2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
-            0, // botDiscountBPs
-            0, // minAdminBotDiscountBPs
-            150, // maxAdminBotDiscountBPs
-            owner,
-            admin,
-            address(payer)
-        );
-
-        vm.stopBroadcast();
-    }
-}
-
 contract DeployUSDCGoerli is DeployUSDCScript {
-    uint8 constant DECIMALS = 18;
-
+    address constant GOERLI_USDC_CONTRACT = 0x07865c6E87B9F70255377e024ace6630C1Eaa37F;
     address constant GOERLI_USD_ETH_CHAINLINK = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
     uint256 constant GOERLI_USD_ETH_CHAINLINK_HEARTBEAT = 1 hours;
+    uint8 constant GOERLI_USDC_DECIMALS = 6;
 
     function run() public {
         vm.startBroadcast();
 
         address owner = msg.sender;
         address admin = owner;
-        IERC20Metadata usdc = new TestERC20('USD Coin', 'USDC');
 
-        Payer payer = new Payer(owner, usdc);
+        Payer payer = new Payer(owner, GOERLI_USDC_CONTRACT);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(GOERLI_USD_ETH_CHAINLINK),
@@ -126,11 +86,11 @@ contract DeployUSDCGoerli is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            usdc,
+            GOERLI_USDC_CONTRACT,
             priceFeed,
-            USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
+            10_000 * 10**GOERLI_USDC_DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
-            2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
+            20_000 * 10**GOERLI_USDC_DECIMALS, // maxAdminBaselinePaymentTokenAmount
             0, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs

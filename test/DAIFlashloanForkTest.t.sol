@@ -65,7 +65,6 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         vm.createSelectFork(vm.envString(MAINNET_RPC_ENVVAR), MAINNET_BLOCK_NUMBER);
         vm.warp(BLOCK_TIMESTAMP);
 
-        dai = IERC20Metadata(DAI_ADDRESS);
         priceFeed = new PriceFeed(
             AggregatorV3Interface(ETH_USD_CHAINLINK),
             1 hours,
@@ -74,11 +73,11 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
         );
         swapRouter = ISwapRouter(SWAP_ROUTER);
 
-        payer = new Payer(owner, dai);
+        payer = new Payer(owner, DAI_ADDRESS);
 
         botDiscountBPs = 50;
         buyer = new TokenBuyer(
-            dai,
+            DAI_ADDRESS,
             priceFeed,
             baselinePaymentTokenAmount,
             0,

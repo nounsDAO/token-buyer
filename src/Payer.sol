@@ -18,7 +18,7 @@
 pragma solidity ^0.8.15;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
-import { IERC20Metadata } from 'openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
 import { SafeERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol';
 import { Math } from 'openzeppelin-contracts/contracts/utils/math/Math.sol';
 import { DebtQueue } from './libs/DebtQueue.sol';
@@ -30,7 +30,7 @@ import { IPayer } from './IPayer.sol';
  * ERC20 token once there's sufficient balance.
  */
 contract Payer is IPayer, Ownable {
-    using SafeERC20 for IERC20Metadata;
+    using SafeERC20 for IERC20;
     using DebtQueue for DebtQueue.DebtDeque;
 
     /**
@@ -40,7 +40,7 @@ contract Payer is IPayer, Ownable {
      */
 
     /// @notice the ERC20 token the owner of this contract wishes to perform payments in.
-    IERC20Metadata public immutable paymentToken;
+    IERC20 public immutable paymentToken;
 
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
@@ -67,8 +67,8 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    constructor(address _owner, IERC20Metadata _paymentToken) {
-        paymentToken = _paymentToken;
+    constructor(address _owner, address _paymentToken) {
+        paymentToken = IERC20(_paymentToken);
         _transferOwnership(_owner);
     }
 

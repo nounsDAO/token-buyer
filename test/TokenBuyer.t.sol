@@ -49,10 +49,10 @@ contract TokenBuyerTest is Test {
         paymentToken = new TestERC20('Payment Token', 'PAY');
         priceFeed = new TestPriceFeed();
 
-        payer = new Payer(owner, paymentToken);
+        payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            paymentToken,
+            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,

@@ -102,7 +102,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     }
 
     constructor(
-        IERC20Metadata _paymentToken,
+        address _paymentToken,
         IPriceFeed _priceFeed,
         uint256 _baselinePaymentTokenAmount,
         uint256 _minAdminBaselinePaymentTokenAmount,
@@ -114,8 +114,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         address _admin,
         address _payer
     ) {
-        paymentToken = _paymentToken;
-        paymentTokenDecimalsDigits = 10**_paymentToken.decimals();
+        paymentToken = IERC20Metadata(_paymentToken);
+        paymentTokenDecimalsDigits = 10**IERC20Metadata(_paymentToken).decimals();
         priceFeed = _priceFeed;
 
         baselinePaymentTokenAmount = _baselinePaymentTokenAmount;
