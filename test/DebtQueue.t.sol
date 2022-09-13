@@ -17,4 +17,24 @@ contract DebtQueueTest is Test {
         assertEq(popped.account, address(1));
         assertEq(popped.amount, 100);
     }
+
+    function test_popFront_manyItems() public {
+        queue.pushBack(DebtQueue.DebtEntry({ account: address(1), amount: 100 }));
+        queue.pushBack(DebtQueue.DebtEntry({ account: address(2), amount: 200 }));
+        queue.pushBack(DebtQueue.DebtEntry({ account: address(3), amount: 300 }));
+
+        DebtQueue.DebtEntry memory popped;
+
+        popped = queue.popFront();
+        assertEq(popped.account, address(1));
+        assertEq(popped.amount, 100);
+
+        popped = queue.popFront();
+        assertEq(popped.account, address(2));
+        assertEq(popped.amount, 200);
+
+        popped = queue.popFront();
+        assertEq(popped.account, address(3));
+        assertEq(popped.amount, 300);
+    }
 }
