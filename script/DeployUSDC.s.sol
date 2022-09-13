@@ -19,7 +19,7 @@ contract DeployUSDCScript is Script {
     uint8 constant MAINNET_USDC_DECIMALS = 6;
 
     // PriceFeed config
-    address constant MAINNET_ETH_USDC_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
     uint256 constant USDC_ETH_CHAINLINK_HEARTBEAT = 1 hours;
     uint256 constant PRICE_UPPER_BOUND = 100_000e18;
     uint256 constant PRICE_LOWER_BOUND = 100e18;
@@ -42,7 +42,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         Payer payer = new Payer(owner, usdc);
 
         PriceFeed priceFeed = new PriceFeed(
-            AggregatorV3Interface(MAINNET_ETH_USDC_CHAINLINK),
+            AggregatorV3Interface(MAINNET_ETH_USD_CHAINLINK),
             USDC_ETH_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
