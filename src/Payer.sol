@@ -80,9 +80,9 @@ contract Payer is IPayer, Ownable {
     }
 
     /**
-     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       EXTERNAL FUNCTIONS (ONLY OWNER)
-     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
     /// @notice Pays a user a certain amount of tokens. Adds a debt entry if there's not enough tokens.
