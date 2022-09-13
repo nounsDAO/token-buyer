@@ -132,7 +132,7 @@ contract TokenBuyerTest is Test {
     function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
 
         (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
 
@@ -141,34 +141,34 @@ contract TokenBuyerTest is Test {
     }
 
     function test_price_botDiscountZero() public {
-        priceFeed.setPrice(1234 * 1e18);
+        priceFeed.setPrice(1234e18);
 
         uint256 price = buyer.price();
 
-        assertEq(price, 1234 * 1e18);
+        assertEq(price, 1234e18);
     }
 
     function test_price_botDiscount50BPs() public {
         vm.prank(owner);
         buyer.setBotDiscountBPs(50);
 
-        priceFeed.setPrice(1700 * 1e18);
+        priceFeed.setPrice(1700e18);
 
         uint256 price = buyer.price();
 
         // 1700 * (1-0.005)
-        assertEq(price, 1691.5 * 1e18);
+        assertEq(price, 1691.5e18);
     }
 
     function test_price_botDiscountHalfPrice() public {
         vm.prank(owner);
         buyer.setBotDiscountBPs(5_000);
 
-        priceFeed.setPrice(4242 * 1e18);
+        priceFeed.setPrice(4242e18);
 
         uint256 price = buyer.price();
 
-        assertEq(price, 2121 * 1e18);
+        assertEq(price, 2121e18);
     }
 
     function test_buyETH_revertsWhenPaused() public {
@@ -182,7 +182,7 @@ contract TokenBuyerTest is Test {
     function test_buyETH_botBuysExactBaselineAmount() public {
         // Say ETH is worth $2000, then the oracle price denominated in ETH would be
         // 1 / 2000 = 0.0005
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
@@ -206,7 +206,7 @@ contract TokenBuyerTest is Test {
         assertEq(payer.debtOf(user), 2000e18);
 
         // bot buys ETH for 2000 tokens
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.startPrank(bot);
@@ -220,7 +220,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_botCappedToBaselineAmount() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 4000e18);
         vm.prank(owner);
@@ -239,7 +239,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenContractHasInsufficientETH() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
@@ -254,7 +254,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETH_revertsWhenTokenApprovalInsufficient() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(bot, 2000e18);
         vm.prank(owner);
@@ -270,7 +270,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETH_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 4000e18);
         vm.prank(owner);
@@ -298,7 +298,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_botBuysExactBaselineAmount() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
@@ -315,7 +315,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_paysBackDebt() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
 
@@ -334,7 +334,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_botCappedToBaselineAmount() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
@@ -352,7 +352,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_revertsWhenContractHasInsufficientETH() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         paymentToken.mint(address(callbackBot), 4000e18);
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
@@ -368,7 +368,7 @@ contract TokenBuyerTest is Test {
     }
 
     function test_buyETHWithCallback_revertsWhenTokenPaymentInsufficient() public {
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 1 ether);
         paymentToken.mint(address(callbackBot), 2000e18);
         vm.prank(owner);
@@ -383,7 +383,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
@@ -395,7 +395,7 @@ contract TokenBuyerTest is Test {
 
     function test_buyETHWithCallback_maliciousBuyerCantReenterOtherBuyETHFunction() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
-        priceFeed.setPrice(2000 * 1e18);
+        priceFeed.setPrice(2000e18);
         vm.deal(address(buyer), 10 ether);
         paymentToken.mint(address(attacker), 2000e18);
         vm.prank(owner);
