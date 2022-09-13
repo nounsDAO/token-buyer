@@ -153,6 +153,11 @@ contract Payer is IPayer, Ownable {
         }
     }
 
+    function queueAt(uint256 index) external view returns (address account, uint256 amount) {
+        DebtQueue.DebtEntry storage debtEntry = queue.at(index);
+        return (debtEntry.account, debtEntry.amount);
+    }
+
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       INTERNAL FUNCTIONS

@@ -7,6 +7,7 @@ import { Payer } from '../src/Payer.sol';
 import { TestERC20 } from './helpers/TestERC20.sol';
 import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
+import { DebtQueue } from '../src/libs/DebtQueue.sol';
 
 contract PayerTest is Test {
     event PaidBackDebt(address indexed account, uint256 amount, uint256 remainingDebt);
@@ -198,5 +199,24 @@ contract PayerTest is Test {
 
         assertEq(payer.debtOf(user), 0);
         assertEq(paymentToken.balanceOf(address(payer)), 100_000e18);
+    }
+
+    function test_queueAt() public {
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(address(1), 100);
+
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(address(2), 200);
+
+        (address account1, uint256 amount1) = payer.queueAt(0);
+        assertEq(account1, address(1));
+        assertEq(amount1, 100);
+
+        (address account2, uint256 amount2) = payer.queueAt(1);
+        assertEq(account2, address(2));
+        assertEq(amount2, 200);
+
+        vm.expectRevert(DebtQueue.OutOfBounds.selector);
+        payer.queueAt(2);
     }
 }
