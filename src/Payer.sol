@@ -143,7 +143,7 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    function debtOf(address account) public view returns (uint256 amount) {
+    function debtOf(address account) external view returns (uint256 amount) {
         uint256 queueLength = queue.length();
         for (uint256 i; i < queueLength; ++i) {
             DebtQueue.DebtEntry storage debtEntry = queue.at(i);
