@@ -9,7 +9,7 @@ import { TestPriceFeed } from './helpers/TestPriceFeed.sol';
 import { MaliciousBuyer, TokenBuyerLike } from './helpers/MaliciousBuyer.sol';
 
 contract PayerTest is Test {
-    event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
+    event PaidBackDebt(address indexed account, uint256 amount, uint256 remainingDebt);
     event RegisteredDebt(address indexed account, uint256 amount);
     event TokensWithdrawn(address indexed account, uint256 amount);
 
@@ -122,7 +122,7 @@ contract PayerTest is Test {
         paymentToken.mint(address(payer), amount);
 
         vm.expectEmit(true, true, true, true);
-        emit PaidBackDebt(user, amount, true);
+        emit PaidBackDebt(user, amount, 0);
         payer.payBackDebt(amount);
 
         assertEq(payer.debtOf(user), 0);
@@ -140,7 +140,7 @@ contract PayerTest is Test {
         paymentToken.mint(address(payer), amount - 1);
 
         vm.expectEmit(true, true, true, true);
-        emit PaidBackDebt(user, amount - 1, false);
+        emit PaidBackDebt(user, amount - 1, 1);
         payer.payBackDebt(amount - 1);
 
         assertEq(payer.debtOf(user), 1);

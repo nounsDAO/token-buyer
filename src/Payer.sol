@@ -57,7 +57,7 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    event PaidBackDebt(address indexed account, uint256 amount, bool fullyPaid);
+    event PaidBackDebt(address indexed account, uint256 amount, uint256 remainingDebt);
     event RegisteredDebt(address indexed account, uint256 amount);
     event TokensWithdrawn(address indexed account, uint256 amount);
 
@@ -120,10 +120,11 @@ contract Payer is IPayer, Ownable {
 
             if (amount < _debtAmount) {
                 // Not enough to cover entire debt, pay what you can and leave
-                debt.amount -= amount; // update remaining debt
+                uint256 remainingDebt = debt.amount - amount;
+                debt.amount = remainingDebt; // update remaining debt
                 totalDebt -= amount;
                 paymentToken.safeTransfer(_debtAccount, amount);
-                emit PaidBackDebt(_debtAccount, amount, false);
+                emit PaidBackDebt(_debtAccount, amount, remainingDebt);
                 return;
             } else {
                 // Enough to cover entire debt entry, pay in full and remove from queue
@@ -131,7 +132,7 @@ contract Payer is IPayer, Ownable {
                 totalDebt -= _debtAmount;
                 paymentToken.safeTransfer(_debtAccount, _debtAmount);
                 queue.popFront(); // remove debt entry
-                emit PaidBackDebt(_debtAccount, _debtAmount, true);
+                emit PaidBackDebt(_debtAccount, _debtAmount, 0);
             }
         }
     }
