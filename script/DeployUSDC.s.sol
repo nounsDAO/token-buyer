@@ -54,9 +54,9 @@ contract DeployUSDCMainnet is DeployUSDCScript {
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**decimals, // maxAdminBaselinePaymentTokenAmount
-            0, // botIncentiveBPs
-            0, // minAdminBotIncentiveBPs
-            150, // maxAdminBotIncentiveBPs
+            0, // botDiscountBPs
+            0, // minAdminBotDiscountBPs
+            150, // maxAdminBotDiscountBPs
             owner,
             admin,
             address(payer)
@@ -91,9 +91,9 @@ contract DeployUSDCRinkeby is DeployUSDCScript {
             USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
-            0, // botIncentiveBPs
-            0, // minAdminBotIncentiveBPs
-            150, // maxAdminBotIncentiveBPs
+            0, // botDiscountBPs
+            0, // minAdminBotDiscountBPs
+            150, // maxAdminBotDiscountBPs
             owner,
             admin,
             address(payer)
@@ -131,9 +131,9 @@ contract DeployUSDCGoerli is DeployUSDCScript {
             USD_POSITION_IN_USD * 10**DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**DECIMALS, // maxAdminBaselinePaymentTokenAmount
-            0, // botIncentiveBPs
-            0, // minAdminBotIncentiveBPs
-            150, // maxAdminBotIncentiveBPs
+            0, // botDiscountBPs
+            0, // minAdminBotDiscountBPs
+            150, // maxAdminBotDiscountBPs
             owner,
             admin,
             address(payer)
