@@ -9,6 +9,16 @@ import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { TestERC20 } from '../test/helpers/TestERC20.sol';
 
 contract DeployUSDCScript is Script {
+    // PriceFeed config
+    uint256 constant ETH_USD_CHAINLINK_HEARTBEAT = 1 hours;
+    uint256 constant PRICE_UPPER_BOUND = 100_000e18; // max $100K / ETH
+    uint256 constant PRICE_LOWER_BOUND = 100e18; // min $100 / ETH
+}
+
+contract DeployUSDCMainnet is DeployUSDCScript {
+    uint256 constant USD_POSITION_IN_USD = 1_000_000;
+    address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+
     // Nouns
     address constant MAINNET_NOUNS_EXECUTOR = 0x0BC3807Ec262cB779b38D65b38158acC3bfedE10;
     address constant TECHPOD_MULTISIG = 0x79095391743e0f017A16c388De6a6a3f175a5cD5;
@@ -17,19 +27,6 @@ contract DeployUSDCScript is Script {
     address constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     uint8 constant MAINNET_USDC_DECIMALS = 6;
 
-    // PriceFeed config
-    address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    uint256 constant ETH_USD_CHAINLINK_HEARTBEAT = 1 hours;
-    uint256 constant PRICE_UPPER_BOUND = 100_000e18;
-    uint256 constant PRICE_LOWER_BOUND = 100e18;
-
-    address constant RINKEBY_USDC_ETH_CHAINLINK = 0x8A753747A1Fa494EC906cE90E9f37563A8AF630e;
-
-    // Buyer config
-    uint256 constant USD_POSITION_IN_USD = 1_000_000;
-}
-
-contract DeployUSDCMainnet is DeployUSDCScript {
     function run() public {
         vm.startBroadcast();
 
