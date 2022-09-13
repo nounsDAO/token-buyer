@@ -20,7 +20,7 @@ contract DeployUSDCScript is Script {
 
     // PriceFeed config
     address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
-    uint256 constant USDC_ETH_CHAINLINK_HEARTBEAT = 1 hours;
+    uint256 constant ETH_USD_CHAINLINK_HEARTBEAT = 1 hours;
     uint256 constant PRICE_UPPER_BOUND = 100_000e18;
     uint256 constant PRICE_LOWER_BOUND = 100e18;
 
@@ -43,7 +43,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(MAINNET_ETH_USD_CHAINLINK),
-            USDC_ETH_CHAINLINK_HEARTBEAT,
+            ETH_USD_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
         );
@@ -80,7 +80,7 @@ contract DeployUSDCRinkeby is DeployUSDCScript {
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(RINKEBY_USDC_ETH_CHAINLINK),
-            USDC_ETH_CHAINLINK_HEARTBEAT,
+            ETH_USD_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
         );
@@ -120,7 +120,7 @@ contract DeployUSDCGoerli is DeployUSDCScript {
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(GOERLI_USD_ETH_CHAINLINK),
-            USDC_ETH_CHAINLINK_HEARTBEAT,
+            ETH_USD_CHAINLINK_HEARTBEAT,
             PRICE_LOWER_BOUND,
             PRICE_UPPER_BOUND
         );
