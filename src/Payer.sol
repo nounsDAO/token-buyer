@@ -68,6 +68,14 @@ contract Payer is IPayer, Ownable {
 
     /**
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+      ERRORS
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+     */
+
+    error CastError();
+
+    /**
+     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
       CONSTRUCTOR
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
@@ -135,12 +143,13 @@ contract Payer is IPayer, Ownable {
             DebtQueue.DebtEntry storage debt = queue.front();
 
             // Cache storage values
-            uint256 _debtAmount = debt.amount;
+            uint96 _debtAmount = debt.amount;
             address _debtAccount = debt.account;
 
             if (amount < _debtAmount) {
                 // Not enough to cover entire debt, pay what you can and leave
-                uint256 remainingDebt = debt.amount - amount;
+                // cast is safe because `amount` < `_debtAmount` (uint96)
+                uint96 remainingDebt = debt.amount - uint96(amount);
 
                 // Update remaining debt in queue
                 debt.amount = remainingDebt;
@@ -214,9 +223,15 @@ contract Payer is IPayer, Ownable {
     /// @param account The address of the account owed debt
     /// @param amount The amount of debt owed in `paymentToken` tokens
     function registerDebt(address account, uint256 amount) internal {
-        queue.pushBack(DebtQueue.DebtEntry({ account: account, amount: amount }));
+        queue.pushBack(DebtQueue.DebtEntry({ account: account, amount: toUint96(amount) }));
         totalDebt += amount;
 
         emit RegisteredDebt(account, amount);
+    }
+
+    /// @notice Safe casting to from uint256 to uint96
+    function toUint96(uint256 value) internal pure returns (uint96) {
+        if (value > type(uint96).max) revert CastError();
+        return uint96(value);
     }
 }

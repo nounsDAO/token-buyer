@@ -43,6 +43,13 @@ contract PayerTest is Test {
         assertEq(payer.debtOf(user), amount);
     }
 
+    function test_sendOrRegisterDebt_revertsAboveUint96() public {
+        uint256 amount = uint256(type(uint96).max) + 1;
+        vm.prank(owner);
+        vm.expectRevert(Payer.CastError.selector);
+        payer.sendOrRegisterDebt(user, amount);
+    }
+
     function test_sendOrRegisterDebt_givenEnoughPaymentTokenPaysInToken() public {
         uint256 amount = 100_000e18;
         paymentToken.mint(address(payer), amount);

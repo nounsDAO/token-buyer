@@ -23,7 +23,7 @@ library DebtQueue {
 
     struct DebtEntry {
         address account;
-        uint256 amount;
+        uint96 amount;
     }
 
     /**
