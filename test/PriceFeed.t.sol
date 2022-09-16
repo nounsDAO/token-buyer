@@ -8,8 +8,8 @@ import { TestChainlinkAggregator } from './helpers/TestChainlinkAggregator.sol';
 
 contract PriceFeedTest is Test {
     uint256 constant STALE_AFTER = 42 hours;
-    uint256 constant PRICE_UPPER_BOUND = 0.01e18; // i.e. 100 tokens buy 1 ETH
-    uint256 constant PRICE_LOWER_BOUND = 0.00001e18; // i.e. 100K tokens buy 1 ETH
+    uint256 constant PRICE_UPPER_BOUND = 100_000e18; // i.e. 100K tokens buy 1 ETH
+    uint256 constant PRICE_LOWER_BOUND = 100e18; // i.e. 100 tokens buy 1 ETH
 
     PriceFeed feed;
     TestChainlinkAggregator chainlink;
@@ -21,26 +21,26 @@ contract PriceFeedTest is Test {
 
     function test_price_decimalsEqualWAD() public {
         chainlink.setDecimals(18);
-        chainlink.setLatestRound(0.005e18, block.timestamp);
+        chainlink.setLatestRound(200e18, block.timestamp);
         feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 0.005e18);
+        assertEq(feed.price(), 200e18);
     }
 
     function test_price_decimalsBelowWAD() public {
         chainlink.setDecimals(16);
-        chainlink.setLatestRound(0.001e16, block.timestamp);
+        chainlink.setLatestRound(1_000e16, block.timestamp);
         feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 0.001e18);
+        assertEq(feed.price(), 1_000e18);
     }
 
     function test_price_decimalsAboveWAD() public {
         chainlink.setDecimals(21);
-        chainlink.setLatestRound(0.001e21, block.timestamp);
+        chainlink.setLatestRound(1_000e21, block.timestamp);
         feed = new PriceFeed(chainlink, STALE_AFTER, PRICE_LOWER_BOUND, PRICE_UPPER_BOUND);
 
-        assertEq(feed.price(), 0.001e18);
+        assertEq(feed.price(), 1_000e18);
     }
 
     function test_price_negativePriceReverts() public {
