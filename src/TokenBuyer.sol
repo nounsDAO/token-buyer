@@ -301,22 +301,33 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    /// @notice Returns the amount of tokens the contract wants to buy and the amount of ETH it will pay for it
-    /// @return tokenAmount amount of tokens the contract wants to buy
+    /// @notice Returns the amount of tokens the contract can buy and the amount of ETH it will pay for it
+    /// This takes into account the current ETH balance this contract has
+    /// @return tokenAmount amount of tokens the contract can buy
     /// @return ethAmount amount of ETH it will pay for the tokens
-    /// @return ethAvailable amount of ETH in this contract's balance
-    function tokenAmountNeededAndETHPayout()
-        public
-        view
-        returns (
-            uint256 tokenAmount,
-            uint256 ethAmount,
-            uint256 ethAvailable
-        )
-    {
-        tokenAmount = tokenAmountNeeded();
-        ethAmount = ethAmountPerTokenAmount(tokenAmount);
-        ethAvailable = address(this).balance;
+    function tokenAmountNeededAndETHPayout() public view returns (uint256, uint256) {
+        uint256 tokenAmount = tokenAmountNeeded();
+        uint256 ethAmount = ethAmountPerTokenAmount(tokenAmount);
+        uint256 ethAvailable = address(this).balance;
+
+        if (ethAvailable > ethAmount) {
+            return (tokenAmount, ethAmount);
+        } else {
+            return (tokenAmountPerEthAmount(ethAvailable), ethAvailable);
+        }
+    }
+
+    /// @notice Returns the amount of tokens the contract expects in return for eth
+    /// @param ethAmount amount of ETH contract to be swapped
+    /// @return amount of tokens the contract will sell the ETH for
+    /// @dev rounding up the results because the contract will round down when calculating
+    /// the eth to send for tokens
+    function tokenAmountPerEthAmount(uint256 ethAmount) public view returns (uint256) {
+        // Example, for USDC, paymentTokenDecimalsDigits = 1e6
+        // ethAmount = 2 ether = 2e18
+        // and price() == 1745910000000000000000 (1745.91) (18 decimals)
+        // (2e18 * 1745910000000000000000 * 1e6 + (1e36 - 1))/ 1e36 = 3491820001.0 = 3491.820001 USDC
+        return (ethAmount * price() * paymentTokenDecimalsDigits + (1e36 - 1)) / 1e36;
     }
 
     /**
