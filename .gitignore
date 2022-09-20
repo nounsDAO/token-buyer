@@ -1,0 +1,9 @@
+.env
+.envrc
+node_modules
+
+# Forge generated files
+
+cache
+out
+broadcast
