@@ -304,9 +304,19 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     /// @notice Returns the amount of tokens the contract wants to buy and the amount of ETH it will pay for it
     /// @return tokenAmount amount of tokens the contract wants to buy
     /// @return ethAmount amount of ETH it will pay for the tokens
-    function tokenAmountNeededAndETHPayout() public view returns (uint256 tokenAmount, uint256 ethAmount) {
+    /// @return ethAvailable amount of ETH in this contract's balance
+    function tokenAmountNeededAndETHPayout()
+        public
+        view
+        returns (
+            uint256 tokenAmount,
+            uint256 ethAmount,
+            uint256 ethAvailable
+        )
+    {
         tokenAmount = tokenAmountNeeded();
         ethAmount = ethAmountPerTokenAmount(tokenAmount);
+        ethAvailable = address(this).balance;
     }
 
     /**

@@ -130,14 +130,17 @@ contract TokenBuyerTest is Test {
     }
 
     function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
+        vm.deal(address(buyer), 2 ether);
+
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
         priceFeed.setPrice(2000e18);
 
-        (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
+        (uint256 tokenAmount, uint256 ethAmount, uint256 ethBalance) = buyer.tokenAmountNeededAndETHPayout();
 
         assertEq(tokenAmount, 100_000e18);
         assertEq(ethAmount, 50 ether);
+        assertEq(ethBalance, 2 ether);
     }
 
     function test_price_botDiscountZero() public {
