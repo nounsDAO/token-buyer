@@ -137,7 +137,21 @@ contract TokenBuyerTest is Test {
         assertEq(tokenAmount, 1810.70721e18);
     }
 
-    function test_tokenAmountPerEthAmount_isReverseOf_ethAmountPerTokenAmount(uint256 ethAmount, uint256 price) public {
+    function test_tokenAmountPerEthAmount_isReverseOf_ethAmountPerTokenAmount_roundsUp() public {
+        uint256 ethAmount = 100000000000000000; // 0.1 ether
+        uint256 price = 111111111111111111111; //  111.111111111111111111
+
+        priceFeed.setPrice(price);
+
+        uint256 tokenAmount = buyer.tokenAmountPerEthAmount(ethAmount);
+        uint256 ethAmount2 = buyer.ethAmountPerTokenAmount(tokenAmount);
+
+        assertEq(ethAmount2, ethAmount);
+    }
+
+    function test_tokenAmountPerEthAmount_isReverseOf_ethAmountPerTokenAmount_fuzz(uint256 ethAmount, uint256 price)
+        public
+    {
         ethAmount = bound(ethAmount, 0, 1e12 ether);
         price = bound(price, 1e18, 1e9 * 1e18);
 

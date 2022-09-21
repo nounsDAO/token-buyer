@@ -310,7 +310,7 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 ethAmount = ethAmountPerTokenAmount(tokenAmount);
         uint256 ethAvailable = address(this).balance;
 
-        if (ethAvailable > ethAmount) {
+        if (ethAvailable >= ethAmount) {
             return (tokenAmount, ethAmount);
         } else {
             return (tokenAmountPerEthAmount(ethAvailable), ethAvailable);
@@ -324,9 +324,11 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     /// the eth to send for tokens
     function tokenAmountPerEthAmount(uint256 ethAmount) public view returns (uint256) {
         // Example, for USDC, paymentTokenDecimalsDigits = 1e6
-        // ethAmount = 2 ether = 2e18
-        // and price() == 1745910000000000000000 (1745.91) (18 decimals)
-        // (2e18 * 1745910000000000000000 * 1e6 + (1e36 - 1))/ 1e36 = 3491820001.0 = 3491.820001 USDC
+        // ethAmount = 0.1 ether = 1e17
+        // and price() == 111111111111111111111 (111.11..) (18 decimals)
+        // (1e17 * 111111111111111111111 * 1e6 + (1e36 - 1)) / 1e36 = 11111112 = 11.111112 USDC
+        // This rounding up  ensures that the other direction works correctly (ethAmountPerTokenAmount):
+        //     ((11111112 * 1e36) / 111111111111111111111) / 1e6 = 0.1 ether
         return (ethAmount * price() * paymentTokenDecimalsDigits + (1e36 - 1)) / 1e36;
     }
 
