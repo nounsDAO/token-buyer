@@ -301,12 +301,35 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    /// @notice Returns the amount of tokens the contract wants to buy and the amount of ETH it will pay for it
-    /// @return tokenAmount amount of tokens the contract wants to buy
+    /// @notice Returns the amount of tokens the contract can buy and the amount of ETH it will pay for it
+    /// This takes into account the current ETH balance this contract has
+    /// @return tokenAmount amount of tokens the contract can buy
     /// @return ethAmount amount of ETH it will pay for the tokens
-    function tokenAmountNeededAndETHPayout() public view returns (uint256 tokenAmount, uint256 ethAmount) {
-        tokenAmount = tokenAmountNeeded();
-        ethAmount = ethAmountPerTokenAmount(tokenAmount);
+    function tokenAmountNeededAndETHPayout() public view returns (uint256, uint256) {
+        uint256 tokenAmount = tokenAmountNeeded();
+        uint256 ethAmount = ethAmountPerTokenAmount(tokenAmount);
+        uint256 ethAvailable = address(this).balance;
+
+        if (ethAvailable >= ethAmount) {
+            return (tokenAmount, ethAmount);
+        } else {
+            return (tokenAmountPerEthAmount(ethAvailable), ethAvailable);
+        }
+    }
+
+    /// @notice Returns the amount of tokens the contract expects in return for eth
+    /// @param ethAmount amount of ETH contract to be swapped
+    /// @return amount of tokens the contract will sell the ETH for
+    /// @dev rounding up the results because the contract will round down when calculating
+    /// the eth to send for tokens
+    function tokenAmountPerEthAmount(uint256 ethAmount) public view returns (uint256) {
+        // Example, for USDC, paymentTokenDecimalsDigits = 1e6
+        // ethAmount = 0.1 ether = 1e17
+        // and price() == 111111111111111111111 (111.11..) (18 decimals)
+        // (1e17 * 111111111111111111111 * 1e6 + (1e36 - 1)) / 1e36 = 11111112 = 11.111112 USDC
+        // This rounding up  ensures that the other direction works correctly (ethAmountPerTokenAmount):
+        //     ((11111112 * 1e36) / 111111111111111111111) / 1e6 = 0.1 ether
+        return (ethAmount * price() * paymentTokenDecimalsDigits + (1e36 - 1)) / 1e36;
     }
 
     /**

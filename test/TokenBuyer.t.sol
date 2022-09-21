@@ -129,7 +129,43 @@ contract TokenBuyerTest is Test {
         assertEq(buyer.tokenAmountNeeded(), 69_000e18);
     }
 
+    function test_tokenAmountPerEthAmount() public {
+        priceFeed.setPrice(1358.37e18);
+        uint256 ethAmount = 1.333 ether;
+        uint256 tokenAmount = buyer.tokenAmountPerEthAmount(ethAmount);
+
+        assertEq(tokenAmount, 1810.70721e18);
+    }
+
+    function test_tokenAmountPerEthAmount_isReverseOf_ethAmountPerTokenAmount_roundsUp() public {
+        uint256 ethAmount = 100000000000000000; // 0.1 ether
+        uint256 price = 111111111111111111111; //  111.111111111111111111
+
+        priceFeed.setPrice(price);
+
+        uint256 tokenAmount = buyer.tokenAmountPerEthAmount(ethAmount);
+        uint256 ethAmount2 = buyer.ethAmountPerTokenAmount(tokenAmount);
+
+        assertEq(ethAmount2, ethAmount);
+    }
+
+    function test_tokenAmountPerEthAmount_isReverseOf_ethAmountPerTokenAmount_fuzz(uint256 ethAmount, uint256 price)
+        public
+    {
+        ethAmount = bound(ethAmount, 0, 1e12 ether);
+        price = bound(price, 1e18, 1e9 * 1e18);
+
+        priceFeed.setPrice(price);
+
+        uint256 tokenAmount = buyer.tokenAmountPerEthAmount(ethAmount);
+        uint256 ethAmount2 = buyer.ethAmountPerTokenAmount(tokenAmount);
+
+        assertEq(ethAmount2, ethAmount);
+    }
+
     function test_tokenAmountNeededAndETHPayout_baselineAmountOnly() public {
+        vm.deal(address(buyer), 50 ether);
+
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(100_000e18);
         priceFeed.setPrice(2000e18);
@@ -138,6 +174,19 @@ contract TokenBuyerTest is Test {
 
         assertEq(tokenAmount, 100_000e18);
         assertEq(ethAmount, 50 ether);
+    }
+
+    function test_tokenAmountNeededAndETHPayout_lessEthAvailable() public {
+        vm.deal(address(buyer), 5 ether);
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(100_000e18);
+        priceFeed.setPrice(2000e18);
+
+        (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
+
+        assertEq(tokenAmount, 10_000e18);
+        assertEq(ethAmount, 5 ether);
     }
 
     function test_price_botDiscountZero() public {
