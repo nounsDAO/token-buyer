@@ -280,17 +280,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    /**
-     * @return The amount of ETH the contract will sell for `tokenAmount` of tokens
-     * Example:
-     *      tokenAmount 3400000000 (3400 USDC) (6 dec)
-     *      price() = 1745910000000000000000 (18 decimals)
-     *      (3400000000 * 1e36) / 1745910000000000000000 / 1e6 = 1.947408515e18
-     */
-
     /// @notice Returns the amount of ETH this contract will send in exchange for `tokenAmount` tokens
     /// @param tokenAmount the amount of tokens
-    /// @return amount of ETH
+    /// @return amount of ETH the contract will sell for `tokenAmount` of tokens
     function ethAmountPerTokenAmount(uint256 tokenAmount) public view returns (uint256) {
         unchecked {
             // Example:
