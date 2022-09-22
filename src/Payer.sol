@@ -44,7 +44,7 @@ contract Payer is IPayer, Ownable {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    /// @notice The total debt owed to used in `paymentToken` tokens
+    /// @notice The total debt owed to users in `paymentToken` tokens
     uint256 public totalDebt;
 
     /// @notice A queue of debt entries waiting to be paid
