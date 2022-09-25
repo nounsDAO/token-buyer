@@ -172,11 +172,12 @@ contract Payer is IPayer, Ownable {
                 // Update total debt
                 totalDebt -= _debtAmount;
 
+                // Remove entry from queue
+                queue.popFront();
+
                 // Pay user the entire amount
                 paymentToken.safeTransfer(_debtAccount, _debtAmount);
 
-                // Remove entry from queue
-                queue.popFront();
                 emit PaidBackDebt(_debtAccount, _debtAmount, 0);
             }
         }
