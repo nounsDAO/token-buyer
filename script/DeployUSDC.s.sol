@@ -22,6 +22,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
     // Nouns
     address constant MAINNET_NOUNS_EXECUTOR = 0x0BC3807Ec262cB779b38D65b38158acC3bfedE10;
     address constant TECHPOD_MULTISIG = 0x79095391743e0f017A16c388De6a6a3f175a5cD5;
+    address constant VERBS_OPERATOR = 0x05954008A8B038EE373b5F2d96Fe3b16467BEF02;
 
     // USDC
     address constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -30,11 +31,9 @@ contract DeployUSDCMainnet is DeployUSDCScript {
     function run() public {
         vm.startBroadcast();
 
-        address owner = MAINNET_NOUNS_EXECUTOR;
-        address admin = TECHPOD_MULTISIG;
         uint8 decimals = MAINNET_USDC_DECIMALS;
 
-        Payer payer = new Payer(owner, MAINNET_USDC);
+        Payer payer = new Payer(TECHPOD_MULTISIG, MAINNET_USDC);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(MAINNET_ETH_USD_CHAINLINK),
@@ -52,8 +51,8 @@ contract DeployUSDCMainnet is DeployUSDCScript {
             0, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
-            owner,
-            admin,
+            TECHPOD_MULTISIG, // owner
+            VERBS_OPERATOR, // admin
             address(payer)
         );
 
