@@ -69,10 +69,7 @@ contract DeployUSDCGoerli is DeployUSDCScript {
     function run() public {
         vm.startBroadcast();
 
-        address owner = msg.sender;
-        address admin = owner;
-
-        Payer payer = new Payer(owner, GOERLI_USDC_CONTRACT);
+        Payer payer = new Payer(msg.sender, GOERLI_USDC_CONTRACT);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(GOERLI_USD_ETH_CHAINLINK),
@@ -90,8 +87,8 @@ contract DeployUSDCGoerli is DeployUSDCScript {
             0, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
-            owner,
-            admin,
+            msg.sender, // owner
+            msg.sender, // admin
             address(payer)
         );
 
