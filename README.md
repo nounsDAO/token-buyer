@@ -48,5 +48,5 @@ forge test
 ## Deploy to testnet
 
 ```sh
-forge script script/DeployUSDC.s.sol:DeployUSDCGoerli --broadcast --verify -vvvvv --chain-id % --rpc-url <GOERLI_RPC> --keystores <KEYSTORE> --sender <DEPLOYER_ADDRESS>
+forge script script/DeployUSDC.s.sol:DeployUSDCGoerli --broadcast --verify -vvvvv --chain-id 5 --rpc-url <GOERLI_RPC> --keystores <KEYSTORE> --sender <DEPLOYER_ADDRESS>
 ```
