@@ -45,7 +45,7 @@ If you're ok with a less-readable trace simply run:
 forge test
 ```
 
-## Deploy to Rinkeby
+## Deploy to testnet
 
 ```sh
 forge script script/DeployUSDC.s.sol:DeployUSDCGoerli --broadcast --verify -vvvvv --chain-id % --rpc-url <GOERLI_RPC> --keystores <KEYSTORE> --sender <DEPLOYER_ADDRESS>
