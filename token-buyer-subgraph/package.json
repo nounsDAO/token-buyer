@@ -1,0 +1,20 @@
+{
+  "name": "token-buyer-subgraph",
+  "license": "UNLICENSED",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ token-buyer-goerli",
+    "create-local": "graph create --node http://localhost:8020/ token-buyer-goerli",
+    "remove-local": "graph remove --node http://localhost:8020/ token-buyer-goerli",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 token-buyer-goerli",
+    "test": "graph test"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-cli": "0.34.0",
+    "@graphprotocol/graph-ts": "0.28.0"
+  },
+  "devDependencies": {
+    "matchstick-as": "0.5.0"
+  }
+}
