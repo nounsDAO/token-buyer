@@ -14,10 +14,8 @@ dataSources:
       apiVersion: 0.0.6
       language: wasm/assemblyscript
       entities:
-        - OwnershipTransferred
-        - PaidBackDebt
-        - RegisteredDebt
-        - TokensWithdrawn
+        - Debt
+        - DebtChange
       abis:
         - name: Payer
           file: ./abis/Payer.json
