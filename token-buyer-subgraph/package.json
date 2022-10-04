@@ -1,6 +1,6 @@
 {
   "name": "token-buyer-subgraph",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0",
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
