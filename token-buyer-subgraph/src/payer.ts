@@ -33,11 +33,10 @@ export function handlePaidBackDebt(event: PaidBackDebt): void {
       event.params.account.toHexString(),
       event.transaction.hash.toHex(),
     ]);
-    return;
+  } else {
+    debt.amount = debt.amount.minus(event.params.amount);
+    debt.save();
   }
-
-  debt.amount = debt.amount.minus(event.params.amount);
-  debt.save();
 
   // Create DebtChange
   const debtChange = new DebtChange(
