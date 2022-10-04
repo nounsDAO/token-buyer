@@ -16,8 +16,10 @@ jobs:
           node-version: 16
       - name: Install Yarn
         run: npm install -g yarn
-      - run: yarn
-      - run: yarn build
+      - name: Install dependencies
+        run: |
+          cd token-buyer-subgraph
+          yarn
       - name: Generate code
         run: |
           cd token-buyer-subgraph
