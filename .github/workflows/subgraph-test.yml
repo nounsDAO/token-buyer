@@ -20,14 +20,14 @@ jobs:
         run: |
           cd token-buyer-subgraph
           yarn
-      - name: Build
-        run: |
-          cd token-buyer-subgraph
-          yarn build
       - name: Generate code
         run: |
           cd token-buyer-subgraph
           yarn codegen
+      - name: Build
+        run: |
+          cd token-buyer-subgraph
+          yarn build
       - name: Run tests
         run: |
           cd token-buyer-subgraph
