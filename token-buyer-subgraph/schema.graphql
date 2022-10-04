@@ -1,0 +1,21 @@
+type Debt @entity {
+  "The account which owns the debt"
+  id: Bytes!
+
+  "Amount of debt owed"
+  amount: BigInt!
+}
+
+type DebtChange @entity {
+  "tx hash concat with log index"
+  id: String!
+
+  "The account which owns the debt"
+  address: Bytes!
+
+  "Amount of debt changed, positive means debt increased, negative means debt decreased"
+  amount: BigInt!
+
+  "The timestamp of the block the event is in"
+  blockTimestamp: BigInt!
+}

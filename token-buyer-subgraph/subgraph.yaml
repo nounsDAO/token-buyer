@@ -1,0 +1,29 @@
+specVersion: 0.0.4
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Payer
+    network: goerli
+    source:
+      address: '0x1c440bf25128f5bc7bb4205ed4f80f7f362663db'
+      startBlock: 7698587
+      abi: Payer
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      entities:
+        - OwnershipTransferred
+        - PaidBackDebt
+        - RegisteredDebt
+        - TokensWithdrawn
+      abis:
+        - name: Payer
+          file: ./abis/Payer.json
+      eventHandlers:
+        - event: PaidBackDebt(indexed address,uint256,uint256)
+          handler: handlePaidBackDebt
+        - event: RegisteredDebt(indexed address,uint256)
+          handler: handleRegisteredDebt
+      file: ./src/payer.ts
