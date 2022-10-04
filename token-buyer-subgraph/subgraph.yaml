@@ -4,11 +4,11 @@ schema:
 dataSources:
   - kind: ethereum
     name: Payer
-    network: goerli
+    network: mainnet
     source:
-      address: '0x1c440bf25128f5bc7bb4205ed4f80f7f362663db'
-      startBlock: 7698587
       abi: Payer
+      address: "0x94A63a8391b8d7d188d48994c4564f0946EbA000"
+      startBlock: 15659525
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.6

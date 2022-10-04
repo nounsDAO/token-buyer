@@ -4,10 +4,11 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ token-buyer-goerli",
-    "create-local": "graph create --node http://localhost:8020/ token-buyer-goerli",
-    "remove-local": "graph remove --node http://localhost:8020/ token-buyer-goerli",
-    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 token-buyer-goerli",
+    "deploy:goerli": "graph deploy --studio --network goerli token-buyer",
+    "deploy:mainnet": "graph deploy --studio --network mainnet token-buyer",
+    "create-local": "graph create --node http://localhost:8020/ token-buyer",
+    "remove-local": "graph remove --node http://localhost:8020/ token-buyer",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 token-buyer",
     "test": "graph test"
   },
   "dependencies": {
