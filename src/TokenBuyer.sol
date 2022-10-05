@@ -302,10 +302,25 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 ethAmount = ethAmountPerTokenAmount(tokenAmount);
         uint256 ethAvailable = address(this).balance;
 
+        // If there's enough ETH balance to pay for the tokens needed
+        if (ethAvailable >= ethAmount) {
+            return (tokenAmount, ethAmount);
+        }
+
+        // How many tokens are needed to buy the available ETH
+        tokenAmount = tokenAmountPerEthAmount(ethAvailable);
+
+        // Check again how much eth this amount of tokens would buy
+        // This may be higher than `ethAvailable` because `tokenAmountPerEthAmount` rounds up
+        ethAmount = ethAmountPerTokenAmount(tokenAmount);
+
         if (ethAvailable >= ethAmount) {
             return (tokenAmount, ethAmount);
         } else {
-            return (tokenAmountPerEthAmount(ethAvailable), ethAvailable);
+            tokenAmount--;
+            ethAmount = ethAmountPerTokenAmount(tokenAmount);
+
+            return (tokenAmount, ethAmount);
         }
     }
 

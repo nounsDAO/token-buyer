@@ -46,7 +46,7 @@ contract TokenBuyerTest is Test {
         vm.label(admin, 'admin');
         vm.label(bot, 'bot');
         vm.label(user, 'user');
-        paymentToken = new TestERC20('Payment Token', 'PAY');
+        paymentToken = new TestERC20('Payment Token', 'PAY', 18);
         priceFeed = new TestPriceFeed();
 
         payer = new Payer(owner, address(paymentToken));
@@ -174,6 +174,37 @@ contract TokenBuyerTest is Test {
 
         assertEq(tokenAmount, 100_000e18);
         assertEq(ethAmount, 50 ether);
+    }
+
+    function test_tokenAmountNeededAndETHPayout_lowersTokensIfItBuysMoreEthThanAvailable() public {
+        paymentToken = new TestERC20('A', 'B', 6);
+        payer = new Payer(owner, address(paymentToken));
+
+        buyer = new TokenBuyer(
+            address(paymentToken),
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            botDiscountBPs,
+            0,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(100_000e6);
+
+        vm.deal(address(buyer), 8 ether);
+
+        priceFeed.setPrice(1350717518812290000000);
+        (uint256 tokenAmount, uint256 ethAmount) = buyer.tokenAmountNeededAndETHPayout();
+
+        uint256 ethAmount2 = buyer.ethAmountPerTokenAmount(tokenAmount);
+
+        assertEq(ethAmount, ethAmount2);
     }
 
     function test_tokenAmountNeededAndETHPayout_lessEthAvailable() public {
