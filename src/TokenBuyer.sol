@@ -302,22 +302,13 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 ethAmount = ethAmountPerTokenAmount(tokenAmount);
         uint256 ethAvailable = address(this).balance;
 
-        // If there's enough ETH balance to pay for the tokens needed
-        if (ethAvailable >= ethAmount) {
-            return (tokenAmount, ethAmount);
-        }
-
-        // How many tokens are needed to buy the available ETH
-        tokenAmount = tokenAmountPerEthAmount(ethAvailable);
-
-        // Check again how much eth this amount of tokens would buy
-        // This may be higher than `ethAvailable` because `tokenAmountPerEthAmount` rounds up
-        ethAmount = ethAmountPerTokenAmount(tokenAmount);
-
         if (ethAvailable >= ethAmount) {
             return (tokenAmount, ethAmount);
         } else {
-            tokenAmount--;
+            // Tokens amount will be rounded down to avoid trying to buy more eth than available
+            tokenAmount = tokenAmountPerEthAmount(ethAvailable);
+
+            // Recalculate eth amount because tokens amount are rounded down
             ethAmount = ethAmountPerTokenAmount(tokenAmount);
 
             return (tokenAmount, ethAmount);
@@ -327,16 +318,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     /// @notice Returns the amount of tokens the contract expects in return for eth
     /// @param ethAmount amount of ETH contract to be swapped
     /// @return amount of tokens the contract will sell the ETH for
-    /// @dev rounding up the results because the contract will round down when calculating
-    /// the eth to send for tokens
+    /// @dev result is rounded down
     function tokenAmountPerEthAmount(uint256 ethAmount) public view returns (uint256) {
-        // Example, for USDC, paymentTokenDecimalsDigits = 1e6
-        // ethAmount = 0.1 ether = 1e17
-        // and price() == 111111111111111111111 (111.11..) (18 decimals)
-        // (1e17 * 111111111111111111111 * 1e6 + (1e36 - 1)) / 1e36 = 11111112 = 11.111112 USDC
-        // This rounding up  ensures that the other direction works correctly (ethAmountPerTokenAmount):
-        //     ((11111112 * 1e36) / 111111111111111111111) / 1e6 = 0.1 ether
-        return (ethAmount * price() * paymentTokenDecimalsDigits + (1e36 - 1)) / 1e36;
+        return (ethAmount * price() * paymentTokenDecimalsDigits) / 1e36;
     }
 
     /**
