@@ -22,7 +22,7 @@ contract PayerTest is Test {
     address user3 = address(0x1236);
 
     function setUp() public {
-        paymentToken = new TestERC20('Payment Token', 'PAY');
+        paymentToken = new TestERC20('Payment Token', 'PAY', 18);
         payer = new Payer(owner, address(paymentToken));
         vm.label(user, 'user');
     }
