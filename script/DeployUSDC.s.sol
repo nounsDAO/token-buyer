@@ -7,6 +7,7 @@ import { TokenBuyer } from '../src/TokenBuyer.sol';
 import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { TestERC20 } from '../test/helpers/TestERC20.sol';
+import { MAINNET_USDC, MAINNET_USDC_DECIMALS, TECHPOD_MULTISIG, VERBS_OPERATOR } from './Constants.s.sol';
 
 contract DeployUSDCScript is Script {
     // PriceFeed config
@@ -21,12 +22,6 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 
     // Nouns
     address constant MAINNET_NOUNS_EXECUTOR = 0x0BC3807Ec262cB779b38D65b38158acC3bfedE10;
-    address constant TECHPOD_MULTISIG = 0x79095391743e0f017A16c388De6a6a3f175a5cD5;
-    address constant VERBS_OPERATOR = 0x05954008A8B038EE373b5F2d96Fe3b16467BEF02;
-
-    // USDC
-    address constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    uint8 constant MAINNET_USDC_DECIMALS = 6;
 
     function run() public {
         vm.startBroadcast();
