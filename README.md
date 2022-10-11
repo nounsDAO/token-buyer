@@ -45,6 +45,12 @@ If you're ok with a less-readable trace simply run:
 forge test
 ```
 
+To run all tests except mainnet forking tests:
+
+```sh
+forge test --nmc '.*Fork.*' -vvv
+```
+
 ## Deploy to testnet
 
 ```sh
