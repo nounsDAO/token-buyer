@@ -43,7 +43,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     error FailedSendingETH(bytes data);
     error FailedWithdrawingETH(bytes data);
     error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
-    error OnlyAdmin();
     error OnlyAdminOrOwner();
     error InvalidBotDiscountBPs();
     error InvalidBaselinePaymentTokenAmount();
@@ -118,13 +117,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
       MODIFIERS
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
-
-    modifier onlyAdmin() {
-        if (admin != msg.sender) {
-            revert OnlyAdmin();
-        }
-        _;
-    }
 
     modifier onlyAdminOrOwner() {
         if (admin != msg.sender && owner() != msg.sender) {
