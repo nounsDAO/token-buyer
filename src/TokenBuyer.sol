@@ -72,6 +72,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
+    uint256 public constant MAX_BPS = 10_000;
+
     /// @notice The ERC20 token the owner of this contract wants to exchange for ETH
     IERC20Metadata public immutable paymentToken;
 
@@ -158,6 +160,13 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         minAdminBaselinePaymentTokenAmount = _minAdminBaselinePaymentTokenAmount;
         maxAdminBaselinePaymentTokenAmount = _maxAdminBaselinePaymentTokenAmount;
 
+        if (
+            (_botDiscountBPs > MAX_BPS) ||
+            (_maxAdminBotDiscountBPs > MAX_BPS) ||
+            (_minAdminBotDiscountBPs > _maxAdminBotDiscountBPs)
+        ) {
+            revert InvalidBotDiscountBPs();
+        }
         botDiscountBPs = _botDiscountBPs;
         minAdminBotDiscountBPs = _minAdminBotDiscountBPs;
         maxAdminBotDiscountBPs = _maxAdminBotDiscountBPs;

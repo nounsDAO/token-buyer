@@ -68,6 +68,55 @@ contract TokenBuyerTest is Test {
         callbackBot = new ETHBuyerBot(address(payer), address(paymentToken), STUB_CALLDATA, botOperator);
     }
 
+    function test_bpsUnder_10000() public {
+        uint16 bpsTooHigh = 10001;
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            address(paymentToken),
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            bpsTooHigh,
+            0,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            address(paymentToken),
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            botDiscountBPs,
+            bpsTooHigh,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            address(paymentToken),
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            botDiscountBPs,
+            0,
+            bpsTooHigh,
+            owner,
+            admin,
+            address(payer)
+        );
+    }
+
     function test_setPriceFeed_revertsForNonOwner() public {
         TestPriceFeed newFeed = new TestPriceFeed();
 
