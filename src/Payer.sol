@@ -137,6 +137,8 @@ contract Payer is IPayer, Ownable {
     /// @param amount The maximum amount of tokens to send. This is expected to be the token balance of this contract
     /// @dev Assumes new entries are add to the 'back' of the queue, meaning oldest entries are at the 'front' of the queue
     function payBackDebt(uint256 amount) external {
+        uint256 debtPaidBack = 0;
+
         // While there are tokens left, and debt entries exist
         while (amount > 0 && !queue.empty()) {
             // Get the oldest entry
@@ -154,23 +156,23 @@ contract Payer is IPayer, Ownable {
                 // Update remaining debt in queue
                 debt.amount = remainingDebt;
 
-                // Update total debt
-                totalDebt -= amount;
+                // Update debt paid back
+                debtPaidBack += amount;
 
                 // Pay user what we can
                 paymentToken.safeTransfer(_debtAccount, amount);
                 emit PaidBackDebt(_debtAccount, amount, remainingDebt);
 
                 // No more tokens, leave
-                return;
+                break;
             } else {
                 // Enough to cover entire debt entry, pay in full and remove from queue
 
                 // Update amount of tokens left to pay back debt
                 amount -= _debtAmount;
 
-                // Update total debt
-                totalDebt -= _debtAmount;
+                // Update debt paid back
+                debtPaidBack += _debtAmount;
 
                 // Remove entry from queue
                 queue.popFront();
@@ -180,6 +182,11 @@ contract Payer is IPayer, Ownable {
 
                 emit PaidBackDebt(_debtAccount, _debtAmount, 0);
             }
+        }
+
+        // Update totalDebt
+        if (debtPaidBack > 0) {
+            totalDebt -= debtPaidBack;
         }
     }
 
