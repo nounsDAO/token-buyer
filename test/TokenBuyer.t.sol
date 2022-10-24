@@ -537,6 +537,26 @@ contract TokenBuyerTest is Test {
         buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
     }
 
+    function test_buyETHWithCallback_usesAllTokensToPayBackDebt() public {
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(address(0x7777), 2000e18 + 10);
+
+        priceFeed.setPrice(2000e18);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(callbackBot), 2000e18 + 10);
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(2000e18);
+        callbackBot.setTokenAmountOverride(2000e18 + 10);
+        callbackBot.setOverrideTokenAmount(true);
+
+        vm.prank(botOperator);
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(address(callbackBot), 1 ether, 2000e18 + 10);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
+
+        assertEq(paymentToken.balanceOf(address(0x7777)), 2000e18 + 10);
+    }
+
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {
         MaliciousBuyer attacker = new MaliciousBuyer(address(buyer), paymentToken);
         priceFeed.setPrice(2000e18);

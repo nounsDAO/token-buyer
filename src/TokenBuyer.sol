@@ -241,9 +241,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
 
         // Invoke `payer` to pay back outstanding debt
-        _payer.payBackDebt(amount);
+        _payer.payBackDebt(tokensReceived);
 
-        emit SoldETH(to, ethAmount, amount);
+        emit SoldETH(to, ethAmount, tokensReceived);
     }
 
     /**
