@@ -151,7 +151,7 @@ contract Payer is IPayer, Ownable {
             if (amount < _debtAmount) {
                 // Not enough to cover entire debt, pay what you can and leave
                 // cast is safe because `amount` < `_debtAmount` (uint96)
-                uint96 remainingDebt = debt.amount - uint96(amount);
+                uint96 remainingDebt = _debtAmount - uint96(amount);
 
                 // Update remaining debt in queue
                 debt.amount = remainingDebt;
