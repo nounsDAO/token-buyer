@@ -77,7 +77,6 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
         botDiscountBPs = 50;
         buyer = new TokenBuyer(
-            DAI_ADDRESS,
             priceFeed,
             baselinePaymentTokenAmount,
             0,

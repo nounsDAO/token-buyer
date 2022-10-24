@@ -17,8 +17,12 @@
 
 pragma solidity ^0.8.15;
 
+import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
+
 interface IPayer {
     function payBackDebt(uint256 amount) external;
 
     function totalDebt() external view returns (uint256);
+
+    function paymentToken() external view returns (IERC20);
 }

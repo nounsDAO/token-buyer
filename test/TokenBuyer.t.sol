@@ -52,7 +52,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -73,7 +72,6 @@ contract TokenBuyerTest is Test {
 
         vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -88,7 +86,6 @@ contract TokenBuyerTest is Test {
 
         vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -103,7 +100,6 @@ contract TokenBuyerTest is Test {
 
         vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -216,7 +212,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -257,7 +252,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,

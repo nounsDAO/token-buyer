@@ -38,7 +38,6 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            MAINNET_USDC,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
@@ -74,7 +73,6 @@ contract DeployUSDCGoerli is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            GOERLI_USDC_CONTRACT,
             priceFeed,
             10_000 * 10**GOERLI_USDC_DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount

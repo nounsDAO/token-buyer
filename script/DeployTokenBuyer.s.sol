@@ -22,7 +22,6 @@ contract DeployTokenBuyer is Script {
         Payer payer = Payer(MAINNET_PAYER);
 
         new TokenBuyer(
-            MAINNET_USDC,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
