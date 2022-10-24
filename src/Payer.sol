@@ -120,7 +120,7 @@ contract Payer is IPayer, Ownable {
     /// @notice Withdraws the entire balance of `paymentToken` to the owner
     /// @dev Only the owner is allowed to call this function
     function withdrawPaymentToken() external onlyOwner {
-        address to = owner();
+        address to = msg.sender; // This is owner() because using `onlyOwner`
         uint256 amount = paymentToken.balanceOf(address(this));
         paymentToken.safeTransfer(to, amount);
 
