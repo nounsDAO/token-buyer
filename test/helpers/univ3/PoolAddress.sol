@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 /// @title Provides functions for deriving a pool address from the factory, tokens, and the fee
 library PoolAddress {
@@ -23,7 +23,7 @@ library PoolAddress {
         uint24 fee
     ) internal pure returns (PoolKey memory) {
         if (tokenA > tokenB) (tokenA, tokenB) = (tokenB, tokenA);
-        return PoolKey({token0: tokenA, token1: tokenB, fee: fee});
+        return PoolKey({ token0: tokenA, token1: tokenB, fee: fee });
     }
 
     /// @notice Deterministically computes the pool address given the factory and PoolKey

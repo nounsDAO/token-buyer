@@ -20,7 +20,7 @@
 // AggregatorV3Interface.sol source code copyright ChainLink licensed under the MIT License.
 // https://github.com/smartcontractkit/chainlink/blob/a64a7fc38b647c490416091bccf39e85ded3961d/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 interface AggregatorV3Interface {
     function decimals() external view returns (uint8);

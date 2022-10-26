@@ -13,7 +13,7 @@
  * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
  *********************************/
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { Pausable } from 'openzeppelin-contracts/contracts/security/Pausable.sol';
