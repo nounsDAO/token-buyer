@@ -13,7 +13,7 @@
  * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
  *********************************/
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { Pausable } from 'openzeppelin-contracts/contracts/security/Pausable.sol';
@@ -43,7 +43,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
     error FailedSendingETH(bytes data);
     error FailedWithdrawingETH(bytes data);
     error ReceivedInsufficientTokens(uint256 expected, uint256 actual);
-    error OnlyAdmin();
     error OnlyAdminOrOwner();
     error InvalidBotDiscountBPs();
     error InvalidBaselinePaymentTokenAmount();
@@ -71,6 +70,8 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
       IMMUTABLES
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
+
+    uint256 public constant MAX_BPS = 10_000;
 
     /// @notice The ERC20 token the owner of this contract wants to exchange for ETH
     IERC20Metadata public immutable paymentToken;
@@ -117,13 +118,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
      */
 
-    modifier onlyAdmin() {
-        if (admin != msg.sender) {
-            revert OnlyAdmin();
-        }
-        _;
-    }
-
     modifier onlyAdminOrOwner() {
         if (admin != msg.sender && owner() != msg.sender) {
             revert OnlyAdminOrOwner();
@@ -138,7 +132,6 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
      */
 
     constructor(
-        address _paymentToken,
         IPriceFeed _priceFeed,
         uint256 _baselinePaymentTokenAmount,
         uint256 _minAdminBaselinePaymentTokenAmount,
@@ -150,6 +143,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         address _admin,
         address _payer
     ) {
+        payer = IPayer(_payer);
+
+        address _paymentToken = address(payer.paymentToken());
         paymentToken = IERC20Metadata(_paymentToken);
         paymentTokenDecimalsDigits = 10**IERC20Metadata(_paymentToken).decimals();
         priceFeed = _priceFeed;
@@ -158,14 +154,19 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         minAdminBaselinePaymentTokenAmount = _minAdminBaselinePaymentTokenAmount;
         maxAdminBaselinePaymentTokenAmount = _maxAdminBaselinePaymentTokenAmount;
 
+        if (
+            (_botDiscountBPs > MAX_BPS) ||
+            (_maxAdminBotDiscountBPs > MAX_BPS) ||
+            (_minAdminBotDiscountBPs > _maxAdminBotDiscountBPs)
+        ) {
+            revert InvalidBotDiscountBPs();
+        }
         botDiscountBPs = _botDiscountBPs;
         minAdminBotDiscountBPs = _minAdminBotDiscountBPs;
         maxAdminBotDiscountBPs = _maxAdminBotDiscountBPs;
 
         _transferOwnership(_owner);
         admin = _admin;
-
-        payer = IPayer(_payer);
     }
 
     /**
@@ -232,9 +233,9 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         }
 
         // Invoke `payer` to pay back outstanding debt
-        _payer.payBackDebt(amount);
+        _payer.payBackDebt(tokensReceived);
 
-        emit SoldETH(to, ethAmount, amount);
+        emit SoldETH(to, ethAmount, tokensReceived);
     }
 
     /**

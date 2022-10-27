@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
@@ -52,7 +52,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -66,6 +65,52 @@ contract TokenBuyerTest is Test {
         );
 
         callbackBot = new ETHBuyerBot(address(payer), address(paymentToken), STUB_CALLDATA, botOperator);
+    }
+
+    function test_bpsUnder_10000() public {
+        uint16 bpsTooHigh = 10001;
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            bpsTooHigh,
+            0,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            botDiscountBPs,
+            bpsTooHigh,
+            10_000,
+            owner,
+            admin,
+            address(payer)
+        );
+
+        vm.expectRevert(TokenBuyer.InvalidBotDiscountBPs.selector);
+        buyer = new TokenBuyer(
+            priceFeed,
+            baselinePaymentTokenAmount,
+            0,
+            10_000_000e18,
+            botDiscountBPs,
+            0,
+            bpsTooHigh,
+            owner,
+            admin,
+            address(payer)
+        );
     }
 
     function test_setPriceFeed_revertsForNonOwner() public {
@@ -167,7 +212,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -208,7 +252,6 @@ contract TokenBuyerTest is Test {
         payer = new Payer(owner, address(paymentToken));
 
         buyer = new TokenBuyer(
-            address(paymentToken),
             priceFeed,
             baselinePaymentTokenAmount,
             0,
@@ -486,6 +529,26 @@ contract TokenBuyerTest is Test {
         vm.expectRevert(abi.encodeWithSelector(TokenBuyer.ReceivedInsufficientTokens.selector, 2000e18, 2000e18 - 1));
         vm.prank(botOperator);
         buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
+    }
+
+    function test_buyETHWithCallback_usesAllTokensToPayBackDebt() public {
+        vm.prank(owner);
+        payer.sendOrRegisterDebt(address(0x7777), 2000e18 + 10);
+
+        priceFeed.setPrice(2000e18);
+        vm.deal(address(buyer), 1 ether);
+        paymentToken.mint(address(callbackBot), 2000e18 + 10);
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(2000e18);
+        callbackBot.setTokenAmountOverride(2000e18 + 10);
+        callbackBot.setOverrideTokenAmount(true);
+
+        vm.prank(botOperator);
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(address(callbackBot), 1 ether, 2000e18 + 10);
+        buyer.buyETH(2000e18, address(callbackBot), STUB_CALLDATA);
+
+        assertEq(paymentToken.balanceOf(address(0x7777)), 2000e18 + 10);
     }
 
     function test_buyETHWithCallback_maliciousBuyerCantReenter() public {

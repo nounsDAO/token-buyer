@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import 'forge-std/Script.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
@@ -22,7 +22,6 @@ contract DeployTokenBuyer is Script {
         Payer payer = Payer(MAINNET_PAYER);
 
         new TokenBuyer(
-            MAINNET_USDC,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount

@@ -13,7 +13,7 @@
  * ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ *
  *********************************/
 
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import { Ownable } from 'openzeppelin-contracts/contracts/access/Ownable.sol';
 import { IERC20 } from 'openzeppelin-contracts/contracts/token/ERC20/IERC20.sol';
@@ -120,7 +120,7 @@ contract Payer is IPayer, Ownable {
     /// @notice Withdraws the entire balance of `paymentToken` to the owner
     /// @dev Only the owner is allowed to call this function
     function withdrawPaymentToken() external onlyOwner {
-        address to = owner();
+        address to = msg.sender; // This is owner() because using `onlyOwner`
         uint256 amount = paymentToken.balanceOf(address(this));
         paymentToken.safeTransfer(to, amount);
 
@@ -137,6 +137,8 @@ contract Payer is IPayer, Ownable {
     /// @param amount The maximum amount of tokens to send. This is expected to be the token balance of this contract
     /// @dev Assumes new entries are add to the 'back' of the queue, meaning oldest entries are at the 'front' of the queue
     function payBackDebt(uint256 amount) external {
+        uint256 debtPaidBack = 0;
+
         // While there are tokens left, and debt entries exist
         while (amount > 0 && !queue.empty()) {
             // Get the oldest entry
@@ -149,28 +151,28 @@ contract Payer is IPayer, Ownable {
             if (amount < _debtAmount) {
                 // Not enough to cover entire debt, pay what you can and leave
                 // cast is safe because `amount` < `_debtAmount` (uint96)
-                uint96 remainingDebt = debt.amount - uint96(amount);
+                uint96 remainingDebt = _debtAmount - uint96(amount);
 
                 // Update remaining debt in queue
                 debt.amount = remainingDebt;
 
-                // Update total debt
-                totalDebt -= amount;
+                // Update debt paid back
+                debtPaidBack += amount;
 
                 // Pay user what we can
                 paymentToken.safeTransfer(_debtAccount, amount);
                 emit PaidBackDebt(_debtAccount, amount, remainingDebt);
 
                 // No more tokens, leave
-                return;
+                break;
             } else {
                 // Enough to cover entire debt entry, pay in full and remove from queue
 
                 // Update amount of tokens left to pay back debt
                 amount -= _debtAmount;
 
-                // Update total debt
-                totalDebt -= _debtAmount;
+                // Update debt paid back
+                debtPaidBack += _debtAmount;
 
                 // Remove entry from queue
                 queue.popFront();
@@ -180,6 +182,11 @@ contract Payer is IPayer, Ownable {
 
                 emit PaidBackDebt(_debtAccount, _debtAmount, 0);
             }
+        }
+
+        // Update totalDebt
+        if (debtPaidBack > 0) {
+            totalDebt -= debtPaidBack;
         }
     }
 

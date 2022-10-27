@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import 'forge-std/Script.sol';
 import { Payer } from '../src/Payer.sol';
@@ -12,12 +12,12 @@ import { MAINNET_USDC, MAINNET_USDC_DECIMALS, TECHPOD_MULTISIG, VERBS_OPERATOR }
 contract DeployUSDCScript is Script {
     // PriceFeed config
     uint256 constant ETH_USD_CHAINLINK_HEARTBEAT = 1 hours;
-    uint256 constant PRICE_UPPER_BOUND = 100_000e18; // max $100K / ETH
+    uint256 constant PRICE_UPPER_BOUND = 8_000e18; // max $8K / ETH
     uint256 constant PRICE_LOWER_BOUND = 100e18; // min $100 / ETH
 }
 
 contract DeployUSDCMainnet is DeployUSDCScript {
-    uint256 constant USD_POSITION_IN_USD = 1_000_000;
+    uint256 constant USD_POSITION_IN_USD = 500_000;
     address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
 
     // Nouns
@@ -38,12 +38,11 @@ contract DeployUSDCMainnet is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            MAINNET_USDC,
             priceFeed,
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**decimals, // maxAdminBaselinePaymentTokenAmount
-            0, // botDiscountBPs
+            10, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
             TECHPOD_MULTISIG, // owner
@@ -74,7 +73,6 @@ contract DeployUSDCGoerli is DeployUSDCScript {
         );
 
         new TokenBuyer(
-            GOERLI_USDC_CONTRACT,
             priceFeed,
             10_000 * 10**GOERLI_USDC_DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount

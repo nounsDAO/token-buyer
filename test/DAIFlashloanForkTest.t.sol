@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.15;
+pragma solidity ^0.8.17;
 
 import 'forge-std/Test.sol';
 import { TokenBuyer } from '../src/TokenBuyer.sol';
@@ -77,7 +77,6 @@ contract DAIFlashloanForkTest is Test, IUniswapV3FlashCallback {
 
         botDiscountBPs = 50;
         buyer = new TokenBuyer(
-            DAI_ADDRESS,
             priceFeed,
             baselinePaymentTokenAmount,
             0,
