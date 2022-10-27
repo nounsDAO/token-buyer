@@ -12,7 +12,7 @@ import { MAINNET_USDC, MAINNET_USDC_DECIMALS, TECHPOD_MULTISIG, VERBS_OPERATOR }
 contract DeployUSDCScript is Script {
     // PriceFeed config
     uint256 constant ETH_USD_CHAINLINK_HEARTBEAT = 1 hours;
-    uint256 constant PRICE_UPPER_BOUND = 100_000e18; // max $100K / ETH
+    uint256 constant PRICE_UPPER_BOUND = 8_000e18; // max $8K / ETH
     uint256 constant PRICE_LOWER_BOUND = 100e18; // min $100 / ETH
 }
 
