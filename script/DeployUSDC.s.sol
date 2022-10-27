@@ -17,7 +17,7 @@ contract DeployUSDCScript is Script {
 }
 
 contract DeployUSDCMainnet is DeployUSDCScript {
-    uint256 constant USD_POSITION_IN_USD = 1_000_000;
+    uint256 constant USD_POSITION_IN_USD = 500_000;
     address constant MAINNET_ETH_USD_CHAINLINK = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
 
     // Nouns
@@ -42,7 +42,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
             USD_POSITION_IN_USD * 10**decimals, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             2 * USD_POSITION_IN_USD * 10**decimals, // maxAdminBaselinePaymentTokenAmount
-            0, // botDiscountBPs
+            10, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
             TECHPOD_MULTISIG, // owner
