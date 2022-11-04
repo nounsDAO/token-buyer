@@ -56,3 +56,9 @@ forge test --nmc '.*Fork.*' -vvv
 ```sh
 forge script script/DeployUSDC.s.sol:DeployUSDCGoerli --broadcast --verify -vvvvv --chain-id 5 --rpc-url <GOERLI_RPC> --keystores <KEYSTORE> --sender <DEPLOYER_ADDRESS>
 ```
+
+## Deploy to mainnet
+
+```sh
+forge script script/DeployUSDC.s.sol:DeployUSDCMainnet --broadcast --verify -vvvvv --chain-id 1 --rpc-url $MAINNET_RPC --sender $DEPLOYER_MAINNET -i 1
+```
