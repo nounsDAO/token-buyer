@@ -62,3 +62,21 @@ forge script script/DeployUSDC.s.sol:DeployUSDCGoerli --broadcast --verify -vvvv
 ```sh
 forge script script/DeployUSDC.s.sol:DeployUSDCMainnet --broadcast --verify -vvvvv --chain-id 1 --rpc-url $MAINNET_RPC --sender $DEPLOYER_MAINNET -i 1
 ```
+
+# Latest deployment
+
+## Goerli
+
+| Contract   | Address |
+|----------- | --------|
+| TokenBuyer | [0x61Ec4584c5B5eBaaD9f21Aac491fBB5B2ff30779](https://goerli.etherscan.io/address/0x61ec4584c5b5ebaad9f21aac491fbb5b2ff30779) |
+| Payer | [0xD4A3bf1dF54699E63A2ef7F490E8E22b27B945f0](https://goerli.etherscan.io/address/0xd4a3bf1df54699e63a2ef7f490e8e22b27b945f0) |
+| PriceFeed | [0x60C80ee511fce9631dce795C48D60Bbf6922e3e9](https://goerli.etherscan.io/address/0x60c80ee511fce9631dce795c48d60bbf6922e3e9) |
+
+## Mainnet
+
+| Contract   | Address |
+|----------- | --------|
+| TokenBuyer | [0xEB12082A312a295C4794F9Fda05D563bcd21BbB3](https://etherscan.io/address/0xeb12082a312a295c4794f9fda05d563bcd21bbb3) |
+| Payer | [0x89AbC50b1Ed7B9B0879433032203a0Bd21B80EB4](https://etherscan.io/address/0x89abc50b1ed7b9b0879433032203a0bd21b80eb4) |
+| PriceFeed | [0x0c49417c2849EA00d13Dbf88CEF951A74A99ED1c](https://etherscan.io/address/0x0c49417c2849ea00d13dbf88cef951a74a99ed1c) |
