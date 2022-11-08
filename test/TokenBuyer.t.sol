@@ -968,6 +968,26 @@ contract TokenBuyerTest is Test {
         buyer.setMaxAdminBaselinePaymentTokenAmount(42);
     }
 
+    function test_ethNeeded() public {
+        priceFeed.setPrice(1400e18);
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(1_000e18);
+
+        uint256 ethNeeded = buyer.ethNeeded(100e18, 5000);
+        assertApproxEqAbs(ethNeeded, 1.178571429e18, 0.00001e18);
+    }
+
+    function test_ethNeededIsZeroIfNothingNeeded() public {
+        priceFeed.setPrice(1400e18);
+
+        vm.prank(owner);
+        buyer.setBaselinePaymentTokenAmount(1_000e18);
+
+        vm.deal(address(buyer), 1.18 ether);
+        assertEq(buyer.ethNeeded(100e18, 5000), 0);
+    }
+
     // Added this due to a compiler warning
     receive() external payable {}
 }
