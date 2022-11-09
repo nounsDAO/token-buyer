@@ -255,7 +255,11 @@ contract TokenBuyer is Ownable, Pausable, ReentrancyGuard {
         uint256 ethCostOfTokens = ethAmountPerTokenAmount(tokenAmount);
         uint256 ethCostWithBuffer = (ethCostOfTokens * (bufferBPs + 10_000)) / 10_000;
 
-        return ethCostWithBuffer - address(this).balance;
+        if (address(this).balance > ethCostWithBuffer) {
+            return 0;
+        } else {
+            return ethCostWithBuffer - address(this).balance;
+        }
     }
 
     /// @notice Returns the amount of tokens this contract is willing to exchange of ETH
