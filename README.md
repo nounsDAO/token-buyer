@@ -2,6 +2,8 @@
 
 This project is under development by [Nouns DAO](https://nouns.wtf/). It's inspired by [YFI Buyer](https://github.com/banteg/yfi-buyer).
 
+[Technical spec](https://github.com/nounsDAO/nouns-tech/tree/main/payment-in-stablecoins)
+
 The purpose of this project is to allow the DAO to pay with ERC20 tokens (e.g. stablecoins) in proposals.
 It's not straightforward for a DAO to swap from ETH to an ERC20 without getting bad price due to sandwich bots pushing the slippage to the max.
 It also allows the DAO to not necessarily hold a large position of the ERC20 to facilitate the payments. Instead, the swaps happens on a need basis.
