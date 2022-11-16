@@ -28,7 +28,7 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 
         uint8 decimals = MAINNET_USDC_DECIMALS;
 
-        Payer payer = new Payer(TECHPOD_MULTISIG, MAINNET_USDC);
+        Payer payer = new Payer(MAINNET_NOUNS_EXECUTOR, MAINNET_USDC);
 
         PriceFeed priceFeed = new PriceFeed(
             AggregatorV3Interface(MAINNET_ETH_USD_CHAINLINK),
@@ -45,8 +45,8 @@ contract DeployUSDCMainnet is DeployUSDCScript {
             10, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
-            TECHPOD_MULTISIG, // owner
-            VERBS_OPERATOR, // admin
+            MAINNET_NOUNS_EXECUTOR, // owner
+            TECHPOD_MULTISIG, // admin
             address(payer)
         );
 
