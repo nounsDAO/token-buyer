@@ -79,6 +79,6 @@ forge script script/DeployUSDC.s.sol:DeployUSDCMainnet --broadcast --verify -vvv
 
 | Contract   | Address |
 |----------- | --------|
-| TokenBuyer | [0xEB12082A312a295C4794F9Fda05D563bcd21BbB3](https://etherscan.io/address/0xeb12082a312a295c4794f9fda05d563bcd21bbb3) |
-| Payer | [0x89AbC50b1Ed7B9B0879433032203a0Bd21B80EB4](https://etherscan.io/address/0x89abc50b1ed7b9b0879433032203a0bd21b80eb4) |
-| PriceFeed | [0x0c49417c2849EA00d13Dbf88CEF951A74A99ED1c](https://etherscan.io/address/0x0c49417c2849ea00d13dbf88cef951a74a99ed1c) |
+| TokenBuyer | [0x4f2aCdc74f6941390d9b1804faBc3E780388cfe5](https://etherscan.io/address/0x4f2aCdc74f6941390d9b1804faBc3E780388cfe5) |
+| Payer | [0xd97Bcd9f47cEe35c0a9ec1dc40C1269afc9E8E1D](https://etherscan.io/address/0xd97Bcd9f47cEe35c0a9ec1dc40C1269afc9E8E1D) |
+| PriceFeed | [0x05e651Bc3a7f7B7640cAD61dC383ca28Ae000cce](https://etherscan.io/address/0x05e651Bc3a7f7B7640cAD61dC383ca28Ae000cce) |
