@@ -44,6 +44,10 @@ contract TestChainlinkAggregator is AggregatorV3Interface {
         updatedAt = _updatedAt;
     }
 
+    function latestAnswer() external view returns (int256) {
+        return _answer;
+    }
+
     function setDecimals(uint8 _decimals) public {
         decimals = _decimals;
     }

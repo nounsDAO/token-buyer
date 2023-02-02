@@ -8,6 +8,7 @@ import { PriceFeed } from '../src/PriceFeed.sol';
 import { AggregatorV3Interface } from '../src/AggregatorV3Interface.sol';
 import { TestERC20 } from '../test/helpers/TestERC20.sol';
 import { MAINNET_USDC, MAINNET_USDC_DECIMALS, TECHPOD_MULTISIG, VERBS_OPERATOR } from './Constants.s.sol';
+import { TestChainlinkAggregator } from '../test/helpers/TestChainlinkAggregator.sol';
 
 contract DeployUSDCScript is Script {
     // PriceFeed config
@@ -78,6 +79,41 @@ contract DeployUSDCGoerli is DeployUSDCScript {
             0, // minAdminBaselinePaymentTokenAmount
             20_000 * 10**GOERLI_USDC_DECIMALS, // maxAdminBaselinePaymentTokenAmount
             0, // botDiscountBPs
+            0, // minAdminBotDiscountBPs
+            150, // maxAdminBotDiscountBPs
+            msg.sender, // owner
+            msg.sender, // admin
+            address(payer)
+        );
+
+        vm.stopBroadcast();
+    }
+}
+
+contract DeployUSDCLocal is DeployUSDCScript {
+    uint8 constant USDC_DECIMALS = 6;
+
+    function run() public {
+        vm.startBroadcast();
+
+        TestChainlinkAggregator chainlink = new TestChainlinkAggregator(18);
+        TestERC20 usdc = new TestERC20('USDC', 'USDC', USDC_DECIMALS);
+
+        Payer payer = new Payer(msg.sender, address(usdc));
+
+        PriceFeed priceFeed = new PriceFeed(
+            AggregatorV3Interface(chainlink),
+            ETH_USD_CHAINLINK_HEARTBEAT,
+            PRICE_LOWER_BOUND,
+            PRICE_UPPER_BOUND
+        );
+
+        new TokenBuyer(
+            priceFeed,
+            500_000 * 10**USDC_DECIMALS, // baselinePaymentTokenAmount
+            0, // minAdminBaselinePaymentTokenAmount
+            1_000_000 * 10**USDC_DECIMALS, // maxAdminBaselinePaymentTokenAmount
+            10, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs
             msg.sender, // owner
