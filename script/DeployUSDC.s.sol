@@ -58,7 +58,6 @@ contract DeployUSDCMainnet is DeployUSDCScript {
 contract DeployUSDCGoerli is DeployUSDCScript {
     address constant GOERLI_USDC_CONTRACT = 0x07865c6E87B9F70255377e024ace6630C1Eaa37F;
     address constant GOERLI_USD_ETH_CHAINLINK = 0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e;
-    uint256 constant GOERLI_USD_ETH_CHAINLINK_HEARTBEAT = 1 hours;
     uint8 constant GOERLI_USDC_DECIMALS = 6;
 
     function run() public {
@@ -78,6 +77,40 @@ contract DeployUSDCGoerli is DeployUSDCScript {
             10_000 * 10**GOERLI_USDC_DECIMALS, // baselinePaymentTokenAmount
             0, // minAdminBaselinePaymentTokenAmount
             20_000 * 10**GOERLI_USDC_DECIMALS, // maxAdminBaselinePaymentTokenAmount
+            0, // botDiscountBPs
+            0, // minAdminBotDiscountBPs
+            150, // maxAdminBotDiscountBPs
+            msg.sender, // owner
+            msg.sender, // admin
+            address(payer)
+        );
+
+        vm.stopBroadcast();
+    }
+}
+
+contract DeployUSDCSepolia is DeployUSDCScript {
+    address constant SEPOLIA_USDC_CONTRACT = 0xEbCC972B6B3eB15C0592BE1871838963d0B94278;
+    address constant SEPOLIA_USD_ETH_CHAINLINK = 0x694AA1769357215DE4FAC081bf1f309aDC325306;
+    uint8 constant SEPOLIA_USDC_DECIMALS = 6;
+
+    function run() public {
+        vm.startBroadcast();
+
+        Payer payer = new Payer(msg.sender, SEPOLIA_USDC_CONTRACT);
+
+        PriceFeed priceFeed = new PriceFeed(
+            AggregatorV3Interface(SEPOLIA_USD_ETH_CHAINLINK),
+            ETH_USD_CHAINLINK_HEARTBEAT,
+            PRICE_LOWER_BOUND,
+            PRICE_UPPER_BOUND
+        );
+
+        new TokenBuyer(
+            priceFeed,
+            10_000 * 10**SEPOLIA_USDC_DECIMALS, // baselinePaymentTokenAmount
+            0, // minAdminBaselinePaymentTokenAmount
+            20_000 * 10**SEPOLIA_USDC_DECIMALS, // maxAdminBaselinePaymentTokenAmount
             0, // botDiscountBPs
             0, // minAdminBotDiscountBPs
             150, // maxAdminBotDiscountBPs

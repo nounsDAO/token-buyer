@@ -67,6 +67,14 @@ forge script script/DeployUSDC.s.sol:DeployUSDCMainnet --broadcast --verify -vvv
 
 # Latest deployment
 
+## Sepolia
+
+| Contract | Address |
+|----------|---------|
+| TokenBuyer | [0x821176470cFeF1dB78F1e2dbae136f73c36ddd48](https://sepolia.etherscan.io/address/0x821176470cfef1db78f1e2dbae136f73c36ddd48) |
+| Payer | [0x5a2A0951C6b3479DBEe1D5909Aac7B325d300D94](https://sepolia.etherscan.io/address/0x5a2a0951c6b3479dbee1d5909aac7b325d300d94) |
+| PriceFeed | [0xaa9AEE18f521E9dC9842a67963Bdb7689bb5D54b](https://sepolia.etherscan.io/address/0xaa9aee18f521e9dc9842a67963bdb7689bb5d54b) |
+
 ## Goerli
 
 | Contract   | Address |
