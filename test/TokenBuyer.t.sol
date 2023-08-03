@@ -123,12 +123,12 @@ contract TokenBuyerTest is Test {
     function test_setPriceFeed_worksForOwner() public {
         TestPriceFeed newFeed = new TestPriceFeed();
         assertTrue(address(newFeed) != address(buyer.priceFeed()));
-        vm.expectEmit(true, true, true, true);
-        emit PriceFeedSet(address(buyer.priceFeed()), address(newFeed));
 
         vm.prank(owner);
         buyer.setMaxAdminBotDiscountBPs(142);
 
+        vm.expectEmit(true, true, true, true);
+        emit PriceFeedSet(address(buyer.priceFeed()), address(newFeed));
         vm.prank(owner);
         buyer.setPriceFeed(newFeed);
 
@@ -338,12 +338,13 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
 
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1 ether, 2000e18);
-
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 2000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 1 ether, 2000e18);
         buyer.buyETH(2000e18);
+
         vm.stopPrank();
 
         assertEq(bot.balance, 1 ether);
@@ -376,11 +377,11 @@ contract TokenBuyerTest is Test {
         vm.prank(owner);
         buyer.setBaselinePaymentTokenAmount(2000e18);
 
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1 ether, 2000e18);
-
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 4000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 1 ether, 2000e18);
         buyer.buyETH(4000e18);
         vm.stopPrank();
 
@@ -592,10 +593,11 @@ contract TokenBuyerTest is Test {
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 99_990e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
@@ -616,10 +618,11 @@ contract TokenBuyerTest is Test {
         vm.deal(address(buyer), 424242424242424242424);
 
         // bots can top off what's missing (bots buy 42K)
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
@@ -643,10 +646,11 @@ contract TokenBuyerTest is Test {
         vm.deal(address(buyer), 1010 ether);
 
         // bots buy buffer
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 99_990e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
@@ -665,10 +669,11 @@ contract TokenBuyerTest is Test {
         vm.deal(address(buyer), 424242424242424242424);
 
         // bots can top off what's missing (bots buy 42K)
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 42_000e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 424242424242424242424, 42_000e18);
         buyer.buyETH(42_000e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
@@ -682,10 +687,11 @@ contract TokenBuyerTest is Test {
         // fund bot and buyer again
         paymentToken.mint(bot, 99_990e18);
         vm.deal(address(buyer), 1010 ether);
-        vm.expectEmit(true, true, true, true);
-        emit SoldETH(bot, 1010 ether, 99_990e18);
         vm.startPrank(bot);
         paymentToken.approve(address(buyer), 99_990e18);
+
+        vm.expectEmit(true, true, true, true);
+        emit SoldETH(bot, 1010 ether, 99_990e18);
         buyer.buyETH(99_990e18);
         vm.stopPrank();
         assertEq(paymentToken.balanceOf(bot), 0);
