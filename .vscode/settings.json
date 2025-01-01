@@ -1,3 +1,5 @@
 {
-    "solidity.formatter": "prettier"
+    "solidity.formatter": "prettier",
+    "solidity.packageDefaultDependenciesContractsDirectory": "src",
+    "solidity.packageDefaultDependenciesDirectory": "lib"
 }
